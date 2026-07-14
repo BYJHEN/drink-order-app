@@ -70,6 +70,8 @@
     -webkit-backdrop-filter:blur(14px);
   }
   .wanted span{color:#625d4f}
+  .wanted{white-space:nowrap;overflow:hidden;font-size:clamp(11px,3.7vw,15px)}
+  .group-message{margin-top:10px;padding:9px 11px;border-radius:8px;background:#f7eed9;color:#625d4f;font-size:12px;font-weight:800;line-height:1.45}
   @media(max-width:560px){.menu-tabs-sticky,#tabs.admin-tabs-sticky{top:76px}}
 </style>
 </head>
@@ -403,6 +405,55 @@ admin=function(){
   adminWithStickyTabs();
   $('#tabs').classList.add('admin-tabs-sticky');
 };
+function wantedHtml(orders){
+  const people=[...new Set(orders.filter(o=>!o.paid).map(o=>o.buyer).filter(Boolean))]
+    .sort(()=>Math.random()-.5).slice(0,2);
+  return `<div class="wanted">${people.length?people.map(esc).join(' ')+' 🐔🔑🍌👛 🙏':'從缺'}</div>`;
+}
+
+function adminGroups(){
+  const rows=[...data.groups].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  return `<h2 class="section-title">開團管理</h2><div class="card form">
+  <label>選擇店家${reqMark()}</label><select id="gstore">${data.stores.map(s=>`<option value="${s.id}">${esc(s.name)}（${esc(s.category||'未分類')}）</option>`).join('')||'<option value="">請先建立店家</option>'}</select>
+  <label>開團者（選填）</label><input id="gcreator" maxlength="30" placeholder="可不填寫">
+  <label>付款者（選填）</label><input id="gpayee" maxlength="30" placeholder="可不填寫">
+  <label>想說的話（選填）</label><input id="gmessage" maxlength="120" placeholder="可不填寫">
+  <label>收單時間${reqMark()}</label><input id="deadline" type="datetime-local">
+  <button class="btn full" style="margin-top:14px" onclick="createGroup()">建立新團購</button></div>
+  <div class="card"><b>開團紀錄</b>${rows.map(g=>`<div class="order"><b>${esc(store(g.storeId)?.name||'已刪除店家')}</b><span class="pill ${isOpen(g)?'paid':'unpaid'}" style="float:right">${isOpen(g)?'開放中':'已結束'}</span><div class="small">開團者：${esc(g.creator||'未填寫')}・付款者：${esc(g.payee||'未填寫')}・收單 ${fmt(g.deadline)}</div><div class="adminlist" style="margin-top:8px"><button class="btn light smallbtn" onclick="editGroup('${g.id}')">編輯</button>${isOpen(g)?`<button class="btn dark smallbtn" onclick="manualClose('${g.id}')">立即收單</button>`:''}<button class="btn danger smallbtn" onclick="deleteGroup('${g.id}')">刪除開團</button></div></div>`).join('')||'<p class="small">尚無開團紀錄</p>'}</div>`;
+}
+
+function createGroup(){
+  if(!data.stores.length)return alert('請先建立店家');
+  const d=$('#deadline').value,creator=$('#gcreator').value.trim(),payee=$('#gpayee').value.trim(),message=$('#gmessage').value.trim();
+  if(!d)return alert('請選擇收單時間');
+  const iso=new Date(d).toISOString();
+  if(new Date(iso)<=now())return alert('收單時間必須晚於現在');
+  data.groups.push({id:crypto.randomUUID(),storeId:$('#gstore').value,creator,payee,message,deadline:iso,createdAt:new Date().toISOString(),manualClosed:false});
+  save();admin();
+}
+
+function editGroup(id){
+  const g=group(id),d=new Date(g.deadline),v=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>編輯團購</h2><label>開團者（選填）</label><input id="editCreator" value="${esc(g.creator||'')}"><label>付款者（選填）</label><input id="editPayee" value="${esc(g.payee||'')}"><label>想說的話（選填）</label><input id="editMessage" maxlength="120" value="${esc(g.message||'')}"><label>收單時間${reqMark()}</label><input id="editDeadline" type="datetime-local" value="${v}"><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn" onclick="saveGroupEdit('${id}')">儲存並重新開放</button></div></div></div>`;
+}
+
+function saveGroupEdit(id){
+  const g=group(id),creator=$('#editCreator').value.trim(),payee=$('#editPayee').value.trim(),message=$('#editMessage').value.trim(),d=$('#editDeadline').value;
+  if(!d)return alert('請選擇收單時間');
+  const iso=new Date(d).toISOString();
+  if(new Date(iso)<=now())return alert('收單時間必須晚於現在');
+  g.creator=creator;g.payee=payee;g.message=message;g.deadline=iso;g.manualClosed=false;save();closeModal();admin();
+}
+
+function home(){
+  const active=data.groups.filter(isOpen).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+  $('#headline').textContent=active.length?`目前有 ${active.length} 個訂單進行中`:'目前沒有開放中的訂單';
+  $('#view').innerHTML=active.length?active.map(g=>{
+    const s=store(g.storeId)||{},phone=s.phone?`<div class="small" style="margin-top:5px"><a href="tel:${esc(s.phone)}" class="badge" style="text-decoration:none">☎ ${esc(s.phone)}</a></div>`:'',message=g.message?`<div class="group-message">${esc(g.message)}</div>`:'';
+    return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><span class="deadline open" style="display:inline-block;margin:0 0 0 7px">收單 ${fmt(g.deadline)}</span><h2>${esc(s.name||'已刪除店家')}</h2>${phone}</div><b class="deadline open">開放中</b></div><div class="deadline">${g.payee?'💲付款者：'+esc(g.payee):''}</div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button>${message}</article>`;
+  }).join(''):`<div class="empty"><b>現在沒有開放中的訂單</b>管理者開團後，就可以在這裡開始點餐。</div>`;
+}
 </script>
 </body>
 </html>
