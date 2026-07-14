@@ -38,6 +38,40 @@
 .quick-remove{height:41px}
 @media(max-width:650px){.build-methods{grid-template-columns:1fr}.quick-grid{grid-template-columns:1fr 1fr}.quick-grid .wide{grid-column:1/-1}.quick-remove{width:100%}}
 </style>
+<style>
+  /* Layout refinements: keep navigation available while reading long menus. */
+  .menu-tabs-sticky{
+    position:sticky;
+    top:76px;
+    z-index:4;
+    margin:0 -16px 10px;
+    padding:10px 16px !important;
+    background:rgba(249,247,241,.94);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(220,216,204,.85);
+  }
+  #tabs.admin-tabs-sticky{
+    position:sticky;
+    top:76px;
+    z-index:4;
+    padding:12px 18px 10px;
+    background:rgba(249,247,241,.94);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(220,216,204,.85);
+  }
+  .wanted{
+    background:rgba(255,255,255,.52);
+    color:#494c45;
+    border:1px solid rgba(255,255,255,.7);
+    box-shadow:0 8px 22px rgba(54,56,50,.16);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+  }
+  .wanted span{color:#625d4f}
+  @media(max-width:560px){.menu-tabs-sticky,#tabs.admin-tabs-sticky{top:76px}}
+</style>
 </head>
 <body>
 <main class="app">
@@ -332,6 +366,43 @@ function confirmStoreDelete(id){if($('#deleteStorePassword').value!==data.passwo
 function adminGroupCard(g){const s=store(g.storeId)||{},os=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>{const ai=a.items[0]?.name||'',bi=b.items[0]?.name||'';return ai.localeCompare(bi,'zh-Hant')||new Date(a.createdAt)-new Date(b.createdAt)}),open=isOpen(g);return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><div style="text-align:right"><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button><div style="margin-top:7px"><span class="pill ${open?'paid':'unpaid'}">${open?'開團中':'已截止'}</span></div></div></div><div class="summary"><b>品項數量加總</b>${adminSummaryLines(os)}<br><b>訂單總金額：NT$ ${os.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</b></div>${os.map(o=>`<div class="order order-grid"><b>${esc(o.buyer)}</b><div class="details">${adminOrderLines(o)}</div><div class="adminlist"><button class="pill ${o.paid?'paid':'unpaid'}" onclick="togglePay('${o.id}')">${o.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeOrder('${o.id}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`}
 function adminGroupCard(g){const s=store(g.storeId)||{},os=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>{const ai=a.items[0]?.name||'',bi=b.items[0]?.name||'';return ai.localeCompare(bi,'zh-Hant')||new Date(a.createdAt)-new Date(b.createdAt)}),open=isOpen(g);return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><div style="text-align:right"><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button><div style="margin-top:7px"><span class="pill ${open?'paid':'unpaid'}">開團狀態：${open?'開放中':'已結束'}</span></div></div></div><div class="summary"><b>品項數量加總</b>${adminSummaryLines(os)}<br><b>訂單總金額：NT$ ${os.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</b></div>${os.map(o=>`<div class="order order-grid"><b>${esc(o.buyer)}</b><div class="details">${adminOrderLines(o)}</div><div class="adminlist"><button class="pill ${o.paid?'paid':'unpaid'}" onclick="togglePay('${o.id}')">${o.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeOrder('${o.id}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`}
 const statusLabelCard=adminGroupCard;adminGroupCard=function(g){return statusLabelCard(g).replace('開團狀態：開放中','開放中').replace('開團狀態：已結束','已結束')};
+/* Final presentation refinements. */
+function wantedHtml(orders){
+  const people=[...new Set(orders.filter(o=>!o.paid).map(o=>o.buyer).filter(Boolean))]
+    .sort(()=>Math.random()-.5).slice(0,2);
+  return `<div class="wanted">🗿${people.length?' '+people.map(esc).join('、'):' 從缺'}</div>`;
+}
+
+function historyGroup(g){
+  const s=store(g.storeId)||{},
+    orders=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)),
+    phone=s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:'',
+    total=orders.reduce((sum,o)=>sum+Number(o.total||0),0),
+    status=isOpen(g)?'本次訂單':'過往訂單',
+    ending=isOpen(g)?'收單 '+fmt(g.deadline):'已於 '+fmt(g.deadline)+' 結束';
+  return `<article class="card"><div class="group-title"><div><h3>${esc(s.name||'已刪除店家')}${phone}</h3><div class="group-meta">開團者：${esc(g.creator||'未填寫')}・${ending}・${status}</div></div></div>${orders.length?`<div class="summary"><b>品項數量加總</b><br>${historySummary(orders)}<br><br><b>訂單總金額：NT$ ${total.toLocaleString()}</b></div>`:''}${orders.map(o=>`<div class="order"><b>${esc(o.buyer)}</b>${historyLines(o)}<div class="small">訂購時間：${fmt(o.createdAt)}</div></div>`).join('')||'<div class="empty">這次團購還沒有訂單</div>'}</article>`;
+}
+
+const menuWithStickyTabsAndReceipt=menu;
+menu=function(){
+  menuWithStickyTabsAndReceipt();
+  const root=$('#view'),head=root.querySelector('.store-head'),category=head?.querySelector('div > .badge'),deadline=head?.querySelector(':scope > .deadline');
+  if(category&&deadline){
+    const receipt=document.createElement('span');
+    receipt.className='badge';
+    receipt.style.marginLeft='7px';
+    receipt.textContent=deadline.textContent;
+    category.insertAdjacentElement('afterend',receipt);
+    deadline.remove();
+  }
+  root.querySelector('.tabs')?.classList.add('menu-tabs-sticky');
+};
+
+const adminWithStickyTabs=admin;
+admin=function(){
+  adminWithStickyTabs();
+  $('#tabs').classList.add('admin-tabs-sticky');
+};
 </script>
 </body>
 </html>
