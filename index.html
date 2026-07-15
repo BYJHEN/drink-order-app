@@ -761,7 +761,7 @@ body{touch-action:auto!important}
 .menu-block{border:1px solid var(--line);border-radius:12px;background:#faf9f4;padding:12px;min-width:0}
 .menu-block-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .menu-block-head strong{flex:1}
-.builder-row{display:grid;grid-template-columns:minmax(120px,1.3fr) minmax(90px,.7fr) auto;gap:8px;align-items:end;margin-top:8px}
+.builder-row{display:grid;grid-template-columns:minmax(120px,1.3fr) 42px minmax(90px,.7fr) 38px;gap:8px;align-items:end;margin-top:8px}
 .builder-row.group-name{grid-template-columns:1fr auto}
 .builder-field label{display:block!important;margin:0 0 5px!important;font-size:12px!important}
 .builder-eq{height:40px;display:grid;place-items:center;font-weight:900;color:var(--p);font-size:16px}
@@ -791,6 +791,7 @@ body{touch-action:auto!important}
 .collapsed-group-name{min-width:0;text-align:left;border:0;background:transparent;padding:3px 5px;color:var(--ink);cursor:pointer}
 .collapsed-group-name span{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
 .collapsed-group-name b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.collapsed-group-options{display:block;margin-top:3px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .group-collapse-btn{white-space:nowrap}
 .extra-group-body{margin-top:8px}
 @media(max-width:600px){
@@ -831,6 +832,7 @@ body{touch-action:auto!important}
         <button type="button" class="btn light smallbtn" onclick="builderAddItem('${b.id}',false)">＋ 新增空白品項</button>
         <button type="button" class="btn light smallbtn" onclick="builderAddItem('${b.id}',true)">＋ 新增品項並沿用上一品項規格</button>
         <button type="button" class="btn light smallbtn" onclick="builderAddBlockAfter('${b.id}')">＋ 新增下一個【區塊】</button>
+        <button type="button" class="btn light smallbtn" onclick="builderAddBlockAfter('${b.id}',true)">＋ 新增下一個區塊並沿用上一品項規格</button>
         ${blocks.length>1?`<button type="button" class="btn danger smallbtn" onclick="builderRemoveBlock('${b.id}')">刪除此區塊</button>`:''}
       </div>
     </section>`).join('');
@@ -843,7 +845,7 @@ body{touch-action:auto!important}
       <div style="margin-top:12px"><b>規格｜分量與價格 <em class="required">*</em></b><div class="builder-muted">至少一個，可不限數量新增；系統會自動加入「=」。</div></div>
       <div>${it.priceRows.map(r=>priceRowEditor(bid,it.id,r)).join('')}</div>
       <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddPriceRow('${bid}','${it.id}')">＋ 新增分量與價格</button>
-      <div style="margin-top:14px"><b>其他規格（選填）</b><div class="builder-muted">例如加料、辣度、甜度；系統會自動加入「=+」。</div></div>
+      <div style="margin-top:14px"><div class="between" style="align-items:center;gap:8px;flex-wrap:wrap"><b>其他規格（選填）</b><div class="builder-actions" style="margin-top:0"><button type="button" class="btn light smallbtn" onclick="builderSetAllGroupsCollapse('${bid}','${it.id}',true)">一鍵摺疊</button><button type="button" class="btn light smallbtn" onclick="builderSetAllGroupsCollapse('${bid}','${it.id}',false)">一鍵展開</button></div></div><div class="builder-muted">例如加料、辣度、甜度；系統會自動加入「=+」。</div></div>
       <div>${it.groups.map(g=>extraGroupEditor(bid,it.id,g)).join('')}</div>
       <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddGroup('${bid}','${it.id}')">＋ 新增其他規格欄位</button>
     </article>`;
@@ -859,7 +861,7 @@ body{touch-action:auto!important}
     return `<div class="menu-block extra-group-card ${collapsed?'is-collapsed':''}" data-bid="${bid}" data-iid="${iid}" data-gid="${g.id}" style="margin-top:9px;background:#fffefa">
       <div class="extra-group-head">
         <button type="button" class="group-drag-handle" aria-label="拖曳調整規格順序" title="按住拖曳調整順序">⋮⋮</button>
-        ${collapsed?`<button type="button" class="collapsed-group-name" onclick="builderToggleGroupCollapse('${bid}','${iid}','${g.id}')"><span>規格欄位名稱</span><b>${escAttr(g.name)||'未命名規格'}</b></button>`:`<div class="builder-field grow"><label>規格欄位名稱</label><input placeholder="例如：加料／客製" value="${escAttr(g.name)}" oninput="builderSetGroup('${bid}','${iid}','${g.id}','name',this.value)"></div>`}
+        ${collapsed?`<button type="button" class="collapsed-group-name" onclick="builderToggleGroupCollapse('${bid}','${iid}','${g.id}')"><span>規格欄位名稱</span><b>${escAttr(g.name)||'未命名規格'}</b><small class="collapsed-group-options">${escAttr((g.rows||[]).map(r=>cleanText(r.label)).filter(Boolean).join('、'))||'尚未填寫選項'}</small></button>`:`<div class="builder-field grow"><label>規格欄位名稱</label><input placeholder="例如：加料／客製" value="${escAttr(g.name)}" oninput="builderSetGroup('${bid}','${iid}','${g.id}','name',this.value)"></div>`}
         <button type="button" class="btn light smallbtn group-collapse-btn" aria-label="${collapsed?'展開':'摺疊'}此規格" onclick="builderToggleGroupCollapse('${bid}','${iid}','${g.id}')">${collapsed?'展開 ▾':'摺疊 ▴'}</button>
         <button type="button" class="btn danger builder-remove" aria-label="刪除此規格" onclick="builderRemoveGroup('${bid}','${iid}','${g.id}')">×</button>
       </div>
@@ -876,6 +878,7 @@ body{touch-action:auto!important}
   window.builderSetPrice=(bid,iid,rid,k,v)=>{const r=findItem(bid,iid)?.priceRows.find(x=>x.id===rid);if(r)r[k]=v};
   window.builderSetGroup=(bid,iid,gid,k,v)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(g)g[k]=v};
   window.builderToggleGroupCollapse=(bid,iid,gid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;g.collapsed=!g.collapsed;renderMenuBuilder()};
+  window.builderSetAllGroupsCollapse=(bid,iid,collapsed)=>{const i=findItem(bid,iid);if(!i)return;i.groups.forEach(g=>g.collapsed=!!collapsed);renderMenuBuilder()};
   window.builderMoveGroup=(bid,iid,fromGid,toGid)=>{const i=findItem(bid,iid);if(!i||fromGid===toGid)return;const from=i.groups.findIndex(g=>g.id===fromGid),to=i.groups.findIndex(g=>g.id===toGid);if(from<0||to<0)return;const [moved]=i.groups.splice(from,1);i.groups.splice(to,0,moved);renderMenuBuilder()};
   window.builderToggleGroupNoPrice=(bid,iid,gid,checked)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;g.noPrice=!!checked;if(g.noPrice)g.rows.forEach(r=>r.price='');else g.rows.forEach(r=>{if(r.price==='')r.price='0'});renderMenuBuilder()};
   window.builderSetGroupRow=(bid,iid,gid,rid,k,v)=>{const r=findItem(bid,iid)?.groups.find(x=>x.id===gid)?.rows.find(x=>x.id===rid);if(r)r[k]=v};
@@ -887,7 +890,7 @@ body{touch-action:auto!important}
   window.builderRemoveGroupRow=(bid,iid,gid,rid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;if(g.rows.length<=1)return alert('每個其他規格至少保留一個選項');g.rows=g.rows.filter(x=>x.id!==rid);renderMenuBuilder()};
   window.builderAddItem=(bid,copyPrevious=false)=>{const b=findBlock(bid);if(!b)return;const next=blankItem();if(copyPrevious&&b.items.length){const prev=b.items[b.items.length-1];next.priceRows=(prev.priceRows||[]).map(r=>({id:uid(),label:r.label,price:r.price}));next.groups=(prev.groups||[]).map(g=>({id:uid(),name:g.name,noPrice:!!g.noPrice,collapsed:!!g.collapsed,rows:(g.rows||[]).map(r=>({id:uid(),label:r.label,price:r.price}))}));}b.items.push(next);renderMenuBuilder()};
   window.builderRemoveItem=(bid,iid)=>{const b=findBlock(bid);if(!b)return;if(b.items.length<=1)return alert('每個區塊至少保留一個品項');b.items=b.items.filter(x=>x.id!==iid);renderMenuBuilder()};
-  window.builderAddBlockAfter=bid=>{const blocks=ensureBuilder(),idx=blocks.findIndex(x=>x.id===bid);blocks.splice(idx+1,0,blankBlock(''));renderMenuBuilder()};
+  window.builderAddBlockAfter=(bid,copyPrevious=false)=>{const blocks=ensureBuilder(),idx=blocks.findIndex(x=>x.id===bid);const next=blankBlock('');if(copyPrevious&&idx>=0){const prevBlock=blocks[idx],prev=prevBlock?.items?.[prevBlock.items.length-1];if(prev){const item=next.items[0];item.priceRows=(prev.priceRows||[]).map(r=>({id:uid(),label:r.label,price:r.price}));item.groups=(prev.groups||[]).map(g=>({id:uid(),name:g.name,noPrice:!!g.noPrice,collapsed:!!g.collapsed,rows:(g.rows||[]).map(r=>({id:uid(),label:r.label,price:r.price}))}));}}blocks.splice(idx+1,0,next);renderMenuBuilder()};
   window.builderRemoveBlock=bid=>{state.menuBuilder=ensureBuilder().filter(x=>x.id!==bid);renderMenuBuilder()};
 
   let groupDrag=null;
