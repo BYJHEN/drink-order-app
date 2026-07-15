@@ -163,7 +163,17 @@ let state={page:'home',group:null,cart:{},buyer:'',focusItem:null,selectedItem:n
 const $=s=>document.querySelector(s);
 const now=()=>new Date();
 const headers={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json'};
-function normalize(raw){raw=raw&&typeof raw==='object'?raw:{};return {password:raw.password||EMPTY.password,stores:Array.isArray(raw.stores)?raw.stores:[],groups:Array.isArray(raw.groups)?raw.groups.map(g=>({...g,creator:g.creator||'',payee:g.payee||''})):[],orders:Array.isArray(raw.orders)?raw.orders:[]}}
+function dedupeOrders(orders){
+  const seen=new Set();
+  return (Array.isArray(orders)?orders:[]).filter(o=>{
+    if(!o||typeof o!=='object')return false;
+    const itemKey=JSON.stringify((o.items||[]).map(x=>[x.name,x.spec,Number(x.qty)||0,Number(x.price)||0]));
+    const key=o.id||[o.groupId,o.buyer,o.createdAt,o.total,itemKey].join('|');
+    if(seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
+function normalize(raw){raw=raw&&typeof raw==='object'?raw:{};return {password:raw.password||EMPTY.password,stores:Array.isArray(raw.stores)?raw.stores:[],groups:Array.isArray(raw.groups)?raw.groups.map(g=>({...g,creator:g.creator||'',payee:g.payee||''})):[],orders:dedupeOrders(raw.orders)}}
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(d,withTime=true){if(!d)return '—';return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',...(withTime?{hour:'2-digit',minute:'2-digit',hour12:false}:{})}).format(new Date(d))}
 function localDate(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d))}
@@ -370,6 +380,29 @@ async function submitQuickOrder(){
  catch(e){data.orders.push(newOrder);save()}
  state.quickRows=[];showOrderSuccess();
 }
+
+/* Prevent duplicate order submission on slow/mobile networks */
+let orderSubmitting=false;
+const submitOrderCore=submitOrder;
+submitOrder=async function(){
+  if(orderSubmitting)return;
+  orderSubmitting=true;
+  const btn=document.activeElement?.closest?.('button');
+  const oldText=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent='送出中…'}
+  try{await submitOrderCore()}
+  finally{orderSubmitting=false;if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=oldText||'送出訂單'}}
+};
+const submitQuickOrderCore=submitQuickOrder;
+submitQuickOrder=async function(){
+  if(orderSubmitting)return;
+  orderSubmitting=true;
+  const btn=document.activeElement?.closest?.('button');
+  const oldText=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent='送出中…'}
+  try{await submitQuickOrderCore()}
+  finally{orderSubmitting=false;if(btn&&document.body.contains(btn)){btn.disabled=false;btn.textContent=oldText||'送出訂單'}}
+};
 function render(){
  const p=state.page;$('#tabs').classList.add('hidden');$('#adminBar').classList.add('hidden');
  document.querySelectorAll('.nav').forEach((x,i)=>x.classList.toggle('on',(p==='home'&&i===0)||(p==='history'&&i===1)||(p==='admin'&&i===2)));
@@ -587,7 +620,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator
 
 function setBusy(button,busy,label='處理中…'){if(!button)return;button.disabled=busy;if(busy){button.dataset.oldText=button.textContent;button.textContent=label}else if(button.dataset.oldText){button.textContent=button.dataset.oldText;delete button.dataset.oldText}}
 const createStoreStable=createStore;
-createStore=function(){const btn=event?.currentTarget;setBusy(btn,true,'儲存中…');try{createStoreStable();toast('店家已儲存，正在同步')}catch(e){console.error(e);alert('儲存失敗：'+(e.message||'請稍後重試'))}finally{setBusy(btn,false)}};
+createStore=function(ev){const btn=ev?.currentTarget||document.activeElement?.closest?.('button');setBusy(btn,true,'儲存中…');try{createStoreStable();toast('店家已儲存，正在同步')}catch(e){console.error(e);alert('儲存失敗：'+(e.message||'請稍後重試'))}finally{setBusy(btn,false)}};
 const createGroupStable=createGroup;
 createGroup=function(){const btn=event?.currentTarget;setBusy(btn,true,'建立中…');try{createGroupStable();toast('開團已建立，正在同步')}catch(e){console.error(e);alert('建立失敗：'+(e.message||'請稍後重試'))}finally{setBusy(btn,false)}};
 
