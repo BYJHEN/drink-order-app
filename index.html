@@ -103,7 +103,7 @@ body{min-height:100%;min-height:100dvh;overflow-x:hidden;-webkit-overflow-scroll
 .tabs{scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}.tabs::-webkit-scrollbar{display:none}
 button,.build-method,.pick-item{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 button:disabled{opacity:.58;cursor:wait}
-.sync-status{position:fixed;right:max(12px,env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));z-index:30;padding:6px 9px;border-radius:99px;background:#ffffffea;color:#514c42;font-size:11px;font-weight:800;box-shadow:0 3px 12px #0002;transition:.2s ease;pointer-events:auto}
+.sync-status{position:fixed;left:max(12px,env(safe-area-inset-left));right:auto;top:auto;bottom:calc(82px + env(safe-area-inset-bottom));z-index:30;padding:6px 9px;border-radius:99px;background:#ffffffea;color:#514c42;font-size:11px;font-weight:800;box-shadow:0 3px 12px #0002;transition:.2s ease;pointer-events:auto;max-width:calc(100vw - 24px);white-space:nowrap}
 .sync-status.ok{color:var(--ok)}.sync-status.warn{color:var(--warn)}.sync-status.error{color:var(--danger)}
 .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:50;width:min(420px,calc(100% - 28px));background:#34332f;color:#fff;padding:12px 14px;border-radius:12px;text-align:center;font-weight:800;opacity:0;transition:.2s ease;pointer-events:none;box-shadow:0 8px 28px #0004}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:560px){.top{padding-left:16px;padding-right:92px}.wanted{top:calc(89px + env(safe-area-inset-top))}.page{contain:layout style}}
@@ -549,7 +549,7 @@ function lightweightData(source){return normalize({...source,stores:(source.stor
 function persistLocal(){
   const full=JSON.stringify(data);
   try{localStorage.setItem(KEY,full);return true}catch(err){
-    try{localStorage.setItem(KEY,JSON.stringify(lightweightData(data)));toast('手機空間不足：菜單附件僅保存在雲端');return false}catch(e){console.warn('本機儲存失敗',e);return false}
+    try{localStorage.setItem(KEY,JSON.stringify(lightweightData(data)));return false}catch(e){console.warn('本機儲存失敗',e);return false}
   }
 }
 save=function(){
