@@ -1315,5 +1315,23 @@ menu=function(){
   };
 })();
 </script>
+<style>
+  /* Mobile menu categories stay directly below the app header while the menu scrolls. */
+  @media (max-width:767px){
+    #tabs.mobile-menu-tabs-host{top:var(--mobile-menu-tabs-top,76px)!important}
+  }
+</style>
+<script id="mobile-category-tabs-offset">
+(()=>{
+  const update=()=>{
+    const header=document.querySelector('.top');
+    if(header)document.documentElement.style.setProperty('--mobile-menu-tabs-top',`${Math.ceil(header.getBoundingClientRect().height)}px`);
+  };
+  update();
+  window.addEventListener('resize',update,{passive:true});
+  window.visualViewport?.addEventListener('resize',update,{passive:true});
+  new ResizeObserver(update).observe(document.querySelector('.top'));
+})();
+</script>
 </body>
 </html>
