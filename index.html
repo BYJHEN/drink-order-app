@@ -218,7 +218,7 @@ img,video,canvas,svg,object,embed,iframe{max-width:100%;height:auto}
 <div id="modal"></div><button id="syncStatus" class="sync-status warn" type="button" onclick="manualSync()">連線中</button><div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const KEY='together-order-v1';
-const APP_VERSION='v12.0.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
+const APP_VERSION='v12.1.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
 const SUPABASE_URL='https://duwinxwcovmplqqkizrk.supabase.co';
 const SUPABASE_KEY='sb_publishable_fRwQthTt4FyTSK3AbVu3nQ_Ou_NWItt';
 const EMPTY={password:'20260713',stores:[],groups:[],orders:[]};
@@ -777,13 +777,18 @@ body{touch-action:auto!important}
  .builder-row .builder-label{grid-column:1/2}.builder-row .builder-eq{grid-column:2/3}.builder-row .builder-price{grid-column:3/4}.builder-row .builder-remove{grid-column:4/5}
  .menu-block{padding:10px}
 }
+
+.builder-check{display:flex!important;align-items:center;gap:8px;margin:10px 0 2px!important;font-size:13px!important;color:var(--ink)}
+.builder-check input{width:18px!important;height:18px!important;min-height:auto!important;flex:0 0 auto}
+.builder-row.no-price{grid-template-columns:minmax(220px,1fr) 42px}
+@media(max-width:600px){.builder-row.no-price{grid-template-columns:minmax(0,1fr) 38px}.builder-row.no-price .builder-remove{grid-column:2/3}}
 </style>
 <script id="v11-builder-script">
 (()=>{
   const uid=()=>crypto.randomUUID?.()||('id'+Date.now()+Math.random().toString(16).slice(2));
   const cleanText=v=>String(v??'').trim();
   const blankPriceRow=()=>({id:uid(),label:'',price:''});
-  const blankExtraGroup=()=>({id:uid(),name:'',rows:[{id:uid(),label:'',price:'0'}]});
+  const blankExtraGroup=()=>({id:uid(),name:'',noPrice:false,rows:[{id:uid(),label:'',price:'0'}]});
   const blankItem=()=>({id:uid(),name:'',priceRows:[blankPriceRow()],groups:[]});
   const blankBlock=(title='')=>({id:uid(),title,items:[blankItem()]});
 
@@ -807,7 +812,8 @@ body{touch-action:auto!important}
       <div class="builder-muted" style="margin-top:5px">留白代表不使用【區塊】；填寫後系統會自動加入【 】。</div>
       <div class="menu-builder">${b.items.map((it,ii)=>menuItemEditor(b.id,it,ii)).join('')}</div>
       <div class="builder-actions">
-        <button type="button" class="btn light smallbtn" onclick="builderAddItem('${b.id}')">＋ 同一【區塊】新增品項</button>
+        <button type="button" class="btn light smallbtn" onclick="builderAddItem('${b.id}',false)">＋ 新增空白品項</button>
+        <button type="button" class="btn light smallbtn" onclick="builderAddItem('${b.id}',true)">＋ 新增品項並沿用上一品項規格</button>
         <button type="button" class="btn light smallbtn" onclick="builderAddBlockAfter('${b.id}')">＋ 新增下一個【區塊】</button>
         ${blocks.length>1?`<button type="button" class="btn danger smallbtn" onclick="builderRemoveBlock('${b.id}')">刪除此區塊</button>`:''}
       </div>
@@ -833,8 +839,9 @@ body{touch-action:auto!important}
     <button type="button" class="btn danger builder-remove" aria-label="刪除此分量與價格" onclick="builderRemovePrice('${bid}','${iid}','${r.id}')">×</button>
   </div>`}
   function extraGroupEditor(bid,iid,g){return `<div class="menu-block" style="margin-top:9px;background:#fffefa">
-    <div class="builder-row group-name"><div class="builder-field"><label>規格欄位名稱</label><input placeholder="例如：加料" value="${escAttr(g.name)}" oninput="builderSetGroup('${bid}','${iid}','${g.id}','name',this.value)"></div><button type="button" class="btn danger builder-remove" onclick="builderRemoveGroup('${bid}','${iid}','${g.id}')">×</button></div>
-    ${g.rows.map(r=>`<div class="builder-row"><div class="builder-field builder-label"><label>選項名稱</label><input placeholder="例如：加滷蛋" value="${escAttr(r.label)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','label',this.value)"></div><div class="builder-eq">=+</div><div class="builder-field builder-price"><label>加價</label><input type="number" min="0" step="1" inputmode="decimal" placeholder="15" value="${escAttr(r.price)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','price',this.value)"></div><button type="button" class="btn danger builder-remove" onclick="builderRemoveGroupRow('${bid}','${iid}','${g.id}','${r.id}')">×</button></div>`).join('')}
+    <div class="builder-row group-name"><div class="builder-field"><label>規格欄位名稱</label><input placeholder="例如：加料／客製" value="${escAttr(g.name)}" oninput="builderSetGroup('${bid}','${iid}','${g.id}','name',this.value)"></div><button type="button" class="btn danger builder-remove" onclick="builderRemoveGroup('${bid}','${iid}','${g.id}')">×</button></div>
+    <label class="builder-check"><input type="checkbox" ${g.noPrice?'checked':''} onchange="builderToggleGroupNoPrice('${bid}','${iid}','${g.id}',this.checked)"> 此規格不需價格（例如：正常、去香菜、飯硬）</label>
+    ${g.rows.map(r=>`<div class="builder-row ${g.noPrice?'no-price':''}"><div class="builder-field builder-label"><label>選項名稱</label><input placeholder="例如：${g.noPrice?'正常':'加滷蛋'}" value="${escAttr(r.label)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','label',this.value)"></div>${g.noPrice?'':`<div class="builder-eq">=+</div><div class="builder-field builder-price"><label>加價</label><input type="number" min="0" step="1" inputmode="decimal" placeholder="15" value="${escAttr(r.price)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','price',this.value)"></div>`}<button type="button" class="btn danger builder-remove" onclick="builderRemoveGroupRow('${bid}','${iid}','${g.id}','${r.id}')">×</button></div>`).join('')}
     <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddGroupRow('${bid}','${iid}','${g.id}')">＋ 新增選項</button>
   </div>`}
 
@@ -842,14 +849,15 @@ body{touch-action:auto!important}
   window.builderSetItem=(bid,iid,k,v)=>{const i=findItem(bid,iid);if(i)i[k]=v};
   window.builderSetPrice=(bid,iid,rid,k,v)=>{const r=findItem(bid,iid)?.priceRows.find(x=>x.id===rid);if(r)r[k]=v};
   window.builderSetGroup=(bid,iid,gid,k,v)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(g)g[k]=v};
+  window.builderToggleGroupNoPrice=(bid,iid,gid,checked)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;g.noPrice=!!checked;if(g.noPrice)g.rows.forEach(r=>r.price='');else g.rows.forEach(r=>{if(r.price==='')r.price='0'});renderMenuBuilder()};
   window.builderSetGroupRow=(bid,iid,gid,rid,k,v)=>{const r=findItem(bid,iid)?.groups.find(x=>x.id===gid)?.rows.find(x=>x.id===rid);if(r)r[k]=v};
   window.builderAddPriceRow=(bid,iid)=>{findItem(bid,iid)?.priceRows.push(blankPriceRow());renderMenuBuilder()};
   window.builderRemovePrice=(bid,iid,rid)=>{const i=findItem(bid,iid);if(!i)return;if(i.priceRows.length<=1)return alert('分量與價格至少要保留一個');i.priceRows=i.priceRows.filter(x=>x.id!==rid);renderMenuBuilder()};
   window.builderAddGroup=(bid,iid)=>{findItem(bid,iid)?.groups.push(blankExtraGroup());renderMenuBuilder()};
   window.builderRemoveGroup=(bid,iid,gid)=>{const i=findItem(bid,iid);if(i)i.groups=i.groups.filter(x=>x.id!==gid);renderMenuBuilder()};
-  window.builderAddGroupRow=(bid,iid,gid)=>{findItem(bid,iid)?.groups.find(x=>x.id===gid)?.rows.push({id:uid(),label:'',price:'0'});renderMenuBuilder()};
+  window.builderAddGroupRow=(bid,iid,gid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(g)g.rows.push({id:uid(),label:'',price:g.noPrice?'':'0'});renderMenuBuilder()};
   window.builderRemoveGroupRow=(bid,iid,gid,rid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;if(g.rows.length<=1)return alert('每個其他規格至少保留一個選項');g.rows=g.rows.filter(x=>x.id!==rid);renderMenuBuilder()};
-  window.builderAddItem=bid=>{findBlock(bid)?.items.push(blankItem());renderMenuBuilder()};
+  window.builderAddItem=(bid,copyPrevious=false)=>{const b=findBlock(bid);if(!b)return;const next=blankItem();if(copyPrevious&&b.items.length){const prev=b.items[b.items.length-1];next.priceRows=(prev.priceRows||[]).map(r=>({id:uid(),label:r.label,price:r.price}));next.groups=(prev.groups||[]).map(g=>({id:uid(),name:g.name,noPrice:!!g.noPrice,rows:(g.rows||[]).map(r=>({id:uid(),label:r.label,price:r.price}))}));}b.items.push(next);renderMenuBuilder()};
   window.builderRemoveItem=(bid,iid)=>{const b=findBlock(bid);if(!b)return;if(b.items.length<=1)return alert('每個區塊至少保留一個品項');b.items=b.items.filter(x=>x.id!==iid);renderMenuBuilder()};
   window.builderAddBlockAfter=bid=>{const blocks=ensureBuilder(),idx=blocks.findIndex(x=>x.id===bid);blocks.splice(idx+1,0,blankBlock(''));renderMenuBuilder()};
   window.builderRemoveBlock=bid=>{state.menuBuilder=ensureBuilder().filter(x=>x.id!==bid);renderMenuBuilder()};
@@ -867,9 +875,14 @@ body{touch-action:auto!important}
         for(const g of it.groups){
           const gn=cleanText(g.name); if(!gn)throw new Error(`「${name}」有其他規格尚未填寫欄位名稱`);
           const rows=g.rows.map(r=>({label:cleanText(r.label),price:cleanText(r.price)}));
-          if(rows.some(r=>!r.label||r.price===''))throw new Error(`「${name}」的「${gn}」選項尚未填寫完整`);
-          if(rows.some(r=>!Number.isFinite(Number(r.price))||Number(r.price)<0))throw new Error(`「${name}」的「${gn}」加價格式不正確`);
-          lines.push(`- [${gn}]：${rows.map(r=>`${r.label}=+${Number(r.price)}`).join(', ')}`);
+          if(rows.some(r=>!r.label))throw new Error(`「${name}」的「${gn}」選項名稱尚未填寫完整`);
+          if(g.noPrice){
+            lines.push(`- [${gn}]：${rows.map(r=>r.label).join(', ')}`);
+          }else{
+            if(rows.some(r=>r.price===''))throw new Error(`「${name}」的「${gn}」加價尚未填寫完整`);
+            if(rows.some(r=>!Number.isFinite(Number(r.price))||Number(r.price)<0))throw new Error(`「${name}」的「${gn}」加價格式不正確`);
+            lines.push(`- [${gn}]：${rows.map(r=>`${r.label}=+${Number(r.price)}`).join(', ')}`);
+          }
         }
       }
     }
@@ -884,7 +897,7 @@ body{touch-action:auto!important}
       const it=blankItem();it.name=item.name||'';
       if(priceGroup){it.priceRows=priceGroup.values.map(v=>({id:uid(),label:v,price:String(priceGroup.adjustments?.[v]??0)}))}
       else {it.priceRows=[{id:uid(),label:item.specs||'單一規格',price:String(item.price??0)}]}
-      it.groups=(item.optionGroups||[]).filter(g=>g!==priceGroup).map(g=>({id:uid(),name:g.name||'',rows:(g.values||[]).map(v=>({id:uid(),label:v,price:String(g.adjustments?.[v]??0)}))}));
+      it.groups=(item.optionGroups||[]).filter(g=>g!==priceGroup).map(g=>{const vals=g.values||[],hasAnyPrice=vals.some(v=>Object.prototype.hasOwnProperty.call(g.adjustments||{},v));return {id:uid(),name:g.name||'',noPrice:!hasAnyPrice,rows:vals.map(v=>({id:uid(),label:v,price:hasAnyPrice?String(g.adjustments?.[v]??0):''}))}});
       block.items.push(it);
     }
     return blocks.length?blocks:[blankBlock('')];
@@ -896,7 +909,7 @@ body{touch-action:auto!important}
     const start=html.indexOf('<div id="fullMenuFields"');
     const button=html.indexOf('<button class="btn full"',start);
     if(start>=0&&button>start){
-      const replacement=`<div id="fullMenuFields" class="${(state.storeBuildMode||'full')==='full'?'':'hidden'}"><label>餐點內容${reqMark()}</label><div class="summary"><b>欄位式菜單編輯</b><br>「【區塊】、品項、規格、=、=+」均由系統自動產生，不需手打。</div><div id="menuBuilder"></div></div>`;
+      const replacement=`<div id="fullMenuFields" class="${(state.storeBuildMode||'full')==='full'?'':'hidden'}"><label>餐點內容${reqMark()}</label><div class="summary"><b>欄位式菜單編輯</b></div><div id="menuBuilder"></div></div>`;
       html=html.slice(0,start)+replacement+html.slice(button);
     }
     setTimeout(renderMenuBuilder,0);return html;
