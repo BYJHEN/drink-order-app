@@ -1254,5 +1254,66 @@ menu=function(){
   localTabs.remove();
 };
 </script>
+<script id="form-navigation-behavior">
+/* Keep an unfinished group-opening form while navigating; store creation always starts fresh. */
+(()=>{
+  let lastAdminTab=state.adminTab;
+  const groupFields=['gstore','gcreator','gpayee','gmessage','deadline'];
+  const captureGroupDraft=()=>{
+    const store=document.querySelector('#gstore');
+    if(!store)return;
+    state.groupFormDraft=Object.fromEntries(groupFields.map(id=>[id,document.querySelector('#'+id)?.value||'']));
+  };
+  const restoreGroupDraft=()=>{
+    const draft=state.groupFormDraft;
+    if(!draft)return;
+    groupFields.forEach(id=>{
+      const field=document.querySelector('#'+id);
+      if(field&&Object.hasOwn(draft,id))field.value=draft[id];
+    });
+  };
+
+  document.addEventListener('input',event=>{
+    if(event.target.matches?.('#gcreator,#gpayee,#gmessage,#deadline'))captureGroupDraft();
+  },true);
+  document.addEventListener('change',event=>{
+    if(event.target.matches?.('#gstore,#deadline'))captureGroupDraft();
+  },true);
+
+  const previousGo=window.go;
+  window.go=function(page,...args){
+    if(state.page==='admin'){
+      captureGroupDraft();
+      if(page!=='admin')lastAdminTab=-1;
+    }
+    return previousGo.call(this,page,...args);
+  };
+
+  const previousAdmin=window.admin;
+  window.admin=function(...args){
+    const enteringStore=state.adminTab===1&&lastAdminTab!==1;
+    if(enteringStore){
+      window.clearStoreDraft?.();
+      state.storeBuildMode='full';
+      state.menuBuilder=typeof blankBlock==='function'?[blankBlock('')]:null;
+    }
+    const result=previousAdmin.apply(this,args);
+    if(state.adminTab===0)restoreGroupDraft();
+    lastAdminTab=state.adminTab;
+    return result;
+  };
+
+  const previousCreateGroup=window.createGroup;
+  window.createGroup=function(...args){
+    const before=data.groups.length;
+    const result=previousCreateGroup.apply(this,args);
+    if(data.groups.length!==before){
+      delete state.groupFormDraft;
+      window.admin();
+    }
+    return result;
+  };
+})();
+</script>
 </body>
 </html>
