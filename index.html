@@ -1333,5 +1333,59 @@ menu=function(){
   new ResizeObserver(update).observe(document.querySelector('.top'));
 })();
 </script>
+<style>
+  @media (max-width:767px){
+    #tabs.mobile-menu-tabs-host.mobile-tabs-pinned{position:fixed!important;z-index:25!important;margin:0!important}
+  }
+</style>
+<script id="mobile-category-tabs-fixed-fallback">
+/* Safari can ignore sticky inside an app shell; pin the category row directly on small screens. */
+(()=>{
+  let placeholder=null,pinnedHost=null,raf=0;
+  const isMobile=()=>window.matchMedia('(max-width:767px)').matches;
+  const clear=()=>{
+    if(pinnedHost){
+      pinnedHost.classList.remove('mobile-tabs-pinned');
+      ['position','top','left','width'].forEach(key=>pinnedHost.style.removeProperty(key));
+    }
+    placeholder?.remove();placeholder=null;pinnedHost=null;
+  };
+  const pin=()=>{
+    raf=0;
+    const host=document.querySelector('#tabs.mobile-menu-tabs-host');
+    const header=document.querySelector('.top');
+    if(!isMobile()||state.page!=='menu'||!host||!header){clear();return}
+    if(pinnedHost&&pinnedHost!==host)clear();
+    const anchor=placeholder||host;
+    const headerBottom=header.getBoundingClientRect().bottom;
+    const rect=anchor.getBoundingClientRect();
+    if(!placeholder&&rect.top<=headerBottom){
+      placeholder=document.createElement('div');
+      placeholder.style.height=rect.height+'px';
+      placeholder.style.width='100%';
+      host.parentNode.insertBefore(placeholder,host);
+      pinnedHost=host;
+    }
+    if(placeholder){
+      const space=placeholder.getBoundingClientRect();
+      if(space.top>headerBottom+1){clear();return}
+      const app=document.querySelector('.app')?.getBoundingClientRect()||{left:0,width:window.innerWidth};
+      host.classList.add('mobile-tabs-pinned');
+      host.style.setProperty('position','fixed','important');
+      host.style.setProperty('top',Math.max(0,Math.round(headerBottom))+'px','important');
+      host.style.setProperty('left',Math.round(app.left)+'px','important');
+      host.style.setProperty('width',Math.round(app.width)+'px','important');
+    }
+  };
+  const queue=()=>{if(!raf)raf=requestAnimationFrame(pin)};
+  window.addEventListener('scroll',queue,{passive:true});
+  document.addEventListener('scroll',queue,{passive:true,capture:true});
+  window.addEventListener('resize',queue,{passive:true});
+  window.visualViewport?.addEventListener('scroll',queue,{passive:true});
+  window.visualViewport?.addEventListener('resize',queue,{passive:true});
+  document.addEventListener('click',()=>setTimeout(queue,0),true);
+  setInterval(queue,450);
+})();
+</script>
 </body>
 </html>
