@@ -1201,6 +1201,7 @@ home=function(){
 </script>
 <style>
   .menu-tabs-floating{position:fixed!important;margin:0!important;z-index:12!important}
+  @media(max-width:560px){.page{contain:style!important}.menu-tabs-sticky{position:-webkit-sticky!important;position:sticky!important;top:76px!important}}
 </style>
 <script>
 (()=>{
@@ -1232,6 +1233,8 @@ home=function(){
   };
   const queue=()=>{if(!frame)frame=requestAnimationFrame(update)};
   window.addEventListener('scroll',queue,{passive:true});
+  document.addEventListener('scroll',queue,{passive:true,capture:true});
+  window.visualViewport?.addEventListener('scroll',queue,{passive:true});
   window.addEventListener('resize',queue);
   document.addEventListener('click',()=>setTimeout(queue,0),true);
   setInterval(queue,700);
