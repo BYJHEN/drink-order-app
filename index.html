@@ -3,7 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#756e5f">
+  <meta name="theme-color" content="#756e5f" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#514c42" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="一起點餐">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="apple-touch-startup-image" href="splash/iphone16.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="splash/iphone16-pro-max.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="app-icon.png">
@@ -74,6 +83,50 @@
   .group-message{margin-top:10px;padding:9px 11px;border-radius:8px;background:#fbf3e3;color:#625d4f;font-size:12px;font-weight:800;line-height:1.45;white-space:pre-line}
   @media(max-width:560px){.menu-tabs-sticky,#tabs.admin-tabs-sticky{top:76px}}
 </style>
+
+<style id="pwa-stability">
+html{height:100%;background:var(--bg);scroll-behavior:smooth;-webkit-text-size-adjust:100%;overscroll-behavior-y:none}
+body{min-height:100%;min-height:100dvh;overflow-x:hidden;-webkit-overflow-scrolling:touch;touch-action:manipulation;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+.app{min-height:100dvh;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+.top{top:0;padding-top:calc(18px + env(safe-area-inset-top));transform:translateZ(0);backface-visibility:hidden;will-change:transform;contain:paint;z-index:10}
+.bottom{padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0);backface-visibility:hidden;z-index:9}
+.tabs{scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}.tabs::-webkit-scrollbar{display:none}
+button,.build-method,.pick-item{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+button:disabled{opacity:.58;cursor:wait}
+.sync-status{position:fixed;right:max(12px,env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));z-index:30;padding:6px 9px;border-radius:99px;background:#ffffffea;color:#514c42;font-size:11px;font-weight:800;box-shadow:0 3px 12px #0002;transition:.2s ease;pointer-events:auto}
+.sync-status.ok{color:var(--ok)}.sync-status.warn{color:var(--warn)}.sync-status.error{color:var(--danger)}
+.toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:50;width:min(420px,calc(100% - 28px));background:#34332f;color:#fff;padding:12px 14px;border-radius:12px;text-align:center;font-weight:800;opacity:0;transition:.2s ease;pointer-events:none;box-shadow:0 8px 28px #0004}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:560px){.top{padding-left:16px;padding-right:92px}.wanted{top:calc(89px + env(safe-area-inset-top))}.page{contain:layout style}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+
+<style id="mobile-preview-fix">
+html,body{width:100%;max-width:100%;overflow-x:hidden;overscroll-behavior-y:none}
+body.modal-open{overflow:hidden;touch-action:none}
+.modal{padding:max(10px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));overflow:hidden}
+.menu-preview-box{width:min(920px,100%);height:min(92dvh,920px);max-height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);padding:0;overflow:hidden;display:flex;flex-direction:column;border-radius:16px}
+.menu-preview-head{display:flex;align-items:center;gap:10px;padding:14px 14px 10px;flex:0 0 auto;border-bottom:1px solid var(--line)}
+.menu-preview-head h2{font-size:18px;line-height:1.25;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.menu-preview-close{min-width:64px;min-height:42px;flex:0 0 auto}
+.menu-preview-tabs{padding:9px 12px 5px;overflow-x:auto;flex:0 0 auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.menu-preview-tabs::-webkit-scrollbar{display:none}
+.menu-preview-stage{position:relative;flex:1;min-height:0;overflow:auto;background:#ece9e1;display:flex;align-items:flex-start;justify-content:center;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-x pan-y pinch-zoom;padding:10px}
+.menu-preview-stage img{display:block;width:auto;height:auto;max-width:100%;max-height:none;object-fit:contain;margin:auto;user-select:none;-webkit-user-drag:none}
+.menu-preview-stage object,.menu-preview-stage iframe{display:block;width:100%;height:100%;min-height:60dvh;border:0;background:#fff}
+.menu-preview-count{font-size:12px;color:var(--muted);white-space:nowrap}
+.menu-preview-foot{padding:8px 12px calc(8px + env(safe-area-inset-bottom));font-size:12px;color:var(--muted);text-align:center;flex:0 0 auto;background:var(--card);border-top:1px solid var(--line)}
+@media(max-width:560px){
+  .modal{place-items:stretch;padding:0;background:#24241fcc}
+  .menu-preview-box{width:100%;height:100dvh;max-height:100dvh;border-radius:0;padding-top:env(safe-area-inset-top)}
+  .menu-preview-head{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .menu-preview-stage{padding:6px}
+  .menu-preview-stage img{max-width:100%;}
+  .top{padding-top:calc(18px + env(safe-area-inset-top));transform:translateZ(0);will-change:transform}
+  .app{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  .bottom{padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0)}
+}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -88,7 +141,7 @@
     <button class="nav" onclick="openAdmin()"><span>⚙️</span>管理</button>
   </div></nav>
 </main>
-<div id="modal"></div>
+<div id="modal"></div><button id="syncStatus" class="sync-status warn" type="button" onclick="manualSync()">連線中</button><div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const KEY='together-order-v1';
 const APP_VERSION='v1.0.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
@@ -475,6 +528,121 @@ editGroup=function(id){
   area.value=input.value;
   input.replaceWith(area);
 };
+
+
+/* PWA stability, offline queue and visible sync state */
+const PENDING_KEY=KEY+'-pending';
+let isSyncing=false, toastTimer=null;
+function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
+function setSyncStatus(kind,text){const el=$('#syncStatus');if(!el)return;el.className='sync-status '+kind;el.textContent=text;el.title=kind==='ok'?'資料已與雲端同步':'點擊重新同步'}
+function lightweightData(source){return normalize({...source,stores:(source.stores||[]).map(st=>({...st,importData:'',menuFiles:(st.menuFiles||[]).map(f=>({name:f.name,data:''}))}))})}
+function persistLocal(){
+  const full=JSON.stringify(data);
+  try{localStorage.setItem(KEY,full);return true}catch(err){
+    try{localStorage.setItem(KEY,JSON.stringify(lightweightData(data)));toast('手機空間不足：菜單附件僅保存在雲端');return false}catch(e){console.warn('本機儲存失敗',e);return false}
+  }
+}
+save=function(){
+  data=normalize(data);persistLocal();localStorage.setItem(PENDING_KEY,'1');setSyncStatus(navigator.onLine?'warn':'error',navigator.onLine?'待同步':'離線暫存');
+  clearTimeout(syncTimer);syncTimer=setTimeout(pushShared,250);return true;
+};
+pushShared=async function(){
+  if(isSyncing)return false;
+  if(!navigator.onLine){setSyncStatus('error','離線暫存');return false}
+  isSyncing=true;setSyncStatus('warn','同步中');
+  try{
+    const r=await fetch(SUPABASE_URL+'/rest/v1/together_order_state?id=eq.shared',{method:'PATCH',headers:{...headers,'Prefer':'return=minimal'},body:JSON.stringify({payload:data,updated_at:new Date().toISOString()})});
+    if(!r.ok)throw new Error(await r.text());
+    localStorage.removeItem(PENDING_KEY);persistLocal();setSyncStatus('ok','已同步');return true;
+  }catch(e){console.warn('雲端同步暫時失敗',e);setSyncStatus('error','同步失敗');return false}
+  finally{isSyncing=false}
+};
+loadSharedState=async function(force=false){
+  if(!navigator.onLine){setSyncStatus('error','離線模式');render();return}
+  if(localStorage.getItem(PENDING_KEY)==='1'&&!force){await pushShared();return}
+  setSyncStatus('warn','更新中');
+  try{
+    const r=await fetch(SUPABASE_URL+'/rest/v1/together_order_state?id=eq.shared&select=payload,updated_at',{headers,cache:'no-store'});
+    if(!r.ok)throw new Error(await r.text());
+    const rows=await r.json();
+    if(rows[0]?.payload){data=normalize(rows[0].payload);persistLocal()}
+    else await fetch(SUPABASE_URL+'/rest/v1/together_order_state',{method:'POST',headers:{...headers,'Prefer':'return=minimal'},body:JSON.stringify({id:'shared',payload:data})});
+    setSyncStatus('ok','已更新');render();
+  }catch(e){console.warn('目前使用本機資料',e);setSyncStatus('error','使用離線資料');render()}
+};
+async function manualSync(){if(localStorage.getItem(PENDING_KEY)==='1')await pushShared();else await loadSharedState(true)}
+window.addEventListener('online',async()=>{toast('網路已恢復，正在同步');await manualSync()});
+window.addEventListener('offline',()=>{setSyncStatus('error','離線模式');toast('目前離線，操作會先暫存在本機')});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)manualSync()});
+
+function setBusy(button,busy,label='處理中…'){if(!button)return;button.disabled=busy;if(busy){button.dataset.oldText=button.textContent;button.textContent=label}else if(button.dataset.oldText){button.textContent=button.dataset.oldText;delete button.dataset.oldText}}
+const createStoreStable=createStore;
+createStore=function(){const btn=event?.currentTarget;setBusy(btn,true,'儲存中…');try{createStoreStable();toast('店家已儲存，正在同步')}catch(e){console.error(e);alert('儲存失敗：'+(e.message||'請稍後重試'))}finally{setBusy(btn,false)}};
+const createGroupStable=createGroup;
+createGroup=function(){const btn=event?.currentTarget;setBusy(btn,true,'建立中…');try{createGroupStable();toast('開團已建立，正在同步')}catch(e){console.error(e);alert('建立失敗：'+(e.message||'請稍後重試'))}finally{setBusy(btn,false)}};
+
+async function optimizeMenuFile(file){
+  if(!file.type.startsWith('image/'))return file;
+  if(file.size<900000)return file;
+  try{
+    const bitmap=await createImageBitmap(file),max=1800,scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+    canvas.getContext('2d',{alpha:false}).drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.78));
+    return blob?new File([blob],file.name.replace(/\.[^.]+$/,'.jpg'),{type:'image/jpeg'}):file;
+  }catch(e){return file}
+}
+importMenus=async function(el){
+  let files=[...el.files];if(!files.length)return;
+  setSyncStatus('warn','處理菜單');files=await Promise.all(files.map(optimizeMenuFile));
+  if(files.some(f=>f.size>3500000)){alert('每個檔案請勿超過 3.5MB');el.value='';return}
+  const current=pendingMenuFiles(),incoming=await Promise.all(files.map(f=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve({name:f.name,data:r.result});r.onerror=reject;r.readAsDataURL(f)})));
+  const all=[...current,...incoming],total=all.reduce((n,f)=>n+(f.data?.length||0),0);
+  if(total>7000000){alert('菜單附件總容量過大，請減少檔案或改用較小圖片。');el.value='';setSyncStatus('error','附件過大');return}
+  $('#filehint').dataset.files=JSON.stringify(all);el.value='';renderPendingMenuFiles();setSyncStatus(navigator.onLine?'ok':'error',navigator.onLine?'菜單已載入':'離線模式');
+};
+importMenu=function(el){importMenus(el)};
+
+if(navigator.onLine)setSyncStatus('warn','連線中');else setSyncStatus('error','離線模式');
+
 </script>
+
+<script id="mobile-preview-and-submit-fix">
+(function(){
+  const originalCloseModal=window.closeModal;
+  window.closeModal=function(){document.body.classList.remove('modal-open');return originalCloseModal?originalCloseModal():($('#modal').innerHTML='')};
+
+  window.showMenuFile=function(id,index=0){
+    const s=store(id),files=s?.menuFiles?.length?s.menuFiles:(s?.importData?[{name:s.importName||'菜單',data:s.importData}]:[]),file=files[index];
+    if(!file)return;
+    menuPreviewState={id,index,total:files.length};
+    const isPdf=(file.data||'').startsWith('data:application/pdf');
+    const content=isPdf
+      ? `<object data="${file.data}" type="application/pdf" aria-label="${esc(file.name)}"><p>此手機無法直接預覽 PDF，請改用圖片格式上傳。</p></object>`
+      : `<img src="${file.data}" alt="${esc(file.name)}" draggable="false">`;
+    const tabs=files.length>1?`<div class="menu-preview-tabs"><div class="tabs" style="padding:0">${files.map((f,i)=>`<button class="tab ${i===index?'on':''}" onclick="showMenuFile('${s.id}',${i})">${esc(f.name)}</button>`).join('')}</div></div>`:'';
+    $('#modal').innerHTML=`<div class="modal menu-preview-modal" onclick="if(event.target===this)closeModal()"><section class="modalbox menu-preview-box" role="dialog" aria-modal="true" aria-label="${esc(s.name)}菜單"><header class="menu-preview-head"><h2>${esc(s.name)}菜單</h2><span class="menu-preview-count">${index+1} / ${files.length}</span><button class="btn light menu-preview-close" onclick="closeModal()">關閉</button></header>${tabs}<div class="menu-preview-stage">${content}</div><div class="menu-preview-foot">可上下滑動查看完整菜單${files.length>1?'，左右滑動可切換':''}</div></section></div>`;
+    document.body.classList.add('modal-open');
+  };
+
+  const stableStore=window.createStore;
+  window.createStore=function(){
+    const btn=document.activeElement?.tagName==='BUTTON'?document.activeElement:null;
+    setBusy(btn,true,'儲存中…');
+    try{stableStore();toast('店家已儲存，正在同步')}
+    catch(e){console.error(e);alert('儲存失敗：'+(e?.message||'請稍後重試'))}
+    finally{setBusy(btn,false)}
+  };
+  const stableGroup=window.createGroup;
+  window.createGroup=function(){
+    const btn=document.activeElement?.tagName==='BUTTON'?document.activeElement:null;
+    setBusy(btn,true,'建立中…');
+    try{stableGroup();toast('開團已建立，正在同步')}
+    catch(e){console.error(e);alert('建立失敗：'+(e?.message||'請稍後重試'))}
+    finally{setBusy(btn,false)}
+  };
+})();
+</script>
+
 </body>
 </html>
