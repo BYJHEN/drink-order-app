@@ -1132,7 +1132,7 @@ body{touch-action:auto!important}
 </script>
 <style>
   /* The menu-category row must remain horizontally scrollable on both touch and desktop devices. */
-  .menu-tabs-sticky{display:flex!important;max-width:100%;overflow-x:auto!important;overflow-y:hidden!important;touch-action:pan-x!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .menu-tabs-sticky{position:sticky!important;top:76px!important;z-index:10!important;display:flex!important;max-width:100%;overflow-x:auto!important;overflow-y:hidden!important;touch-action:pan-x!important;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:rgba(249,247,241,.96);border-bottom:1px solid rgba(220,216,204,.85);box-shadow:0 7px 14px rgba(84,79,67,.07)}
   .menu-tabs-sticky .tab{flex:0 0 auto;touch-action:pan-x!important}
 </style>
 <style>
@@ -1179,6 +1179,25 @@ menu=function(){
     tabs.scrollLeft+=e.deltaY;e.preventDefault();
   },{passive:false});
 })();
+</script>
+<style>
+  .order-empty-scene{position:relative;min-height:420px;display:grid;place-items:center;overflow:hidden;padding:34px 18px;background:radial-gradient(circle at 18% 12%,rgba(255,255,255,.8),transparent 28%),linear-gradient(145deg,#eeeae1,#d7d2c6);border-radius:14px;isolation:isolate}
+  .order-empty-scene::before{position:absolute;inset:0;z-index:-1;content:"";opacity:.3;background-image:linear-gradient(rgba(90,85,74,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(90,85,74,.025) 1px,transparent 1px);background-size:5px 5px,7px 7px}
+  .order-empty-sun{position:absolute;top:12%;right:14%;width:88px;aspect-ratio:1;border-radius:50%;background:rgba(178,137,111,.18);box-shadow:0 0 0 16px rgba(178,137,111,.025)}
+  .order-empty-tree{position:absolute;z-index:-1;width:min(62vw,420px);color:#656158;opacity:.48;filter:drop-shadow(0 10px 22px rgba(64,61,54,.08))}.order-empty-tree.left{left:-70px;bottom:-24px}.order-empty-tree.right{top:-30px;right:-110px;transform:rotate(177deg) scaleX(-1);opacity:.27}
+  .order-empty-tree path{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}.order-empty-tree ellipse:nth-of-type(odd){fill:#76816d}.order-empty-tree ellipse:nth-of-type(even){fill:#91998a}
+  .order-empty-card{position:relative;width:min(100%,560px);padding:60px 30px 62px;text-align:center;background:rgba(246,243,235,.76);border:1px solid rgba(255,255,255,.74);box-shadow:0 28px 70px rgba(72,68,59,.12);backdrop-filter:blur(13px)}
+  .order-empty-card::before{position:absolute;inset:12px;content:"";border:1px solid rgba(96,101,88,.14);pointer-events:none}.order-empty-symbol{display:grid;place-items:center;width:72px;height:72px;margin:0 auto 25px;border-radius:50%;background:#76806e;color:#f4f0e8;font-family:serif;font-size:32px;box-shadow:0 8px 22px rgba(67,72,61,.14)}.order-empty-eyebrow{color:#7c7d76;font-size:11px;letter-spacing:.32em}.order-empty-copy{margin-top:18px;color:#625d4f;font-size:14px}.order-empty-divider{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:23px}.order-empty-divider::before,.order-empty-divider::after{width:40px;height:1px;content:"";background:rgba(93,98,86,.34)}.order-empty-divider span{width:5px;height:5px;border:1px solid rgba(93,98,86,.5);transform:rotate(45deg)}
+  @media(max-width:560px){.order-empty-scene{min-height:380px}.order-empty-card{padding:52px 24px 56px}.order-empty-tree{width:88vw}.order-empty-tree.left{left:-96px}.order-empty-tree.right{right:-125px}}
+</style>
+<script>
+const homeWithOrderEmptyScene=home;
+home=function(){
+  const active=data.groups.filter(isOpen);
+  if(active.length)return homeWithOrderEmptyScene();
+  $('#headline').textContent='目前沒有開放中的訂單';
+  $('#view').innerHTML=`<section class="order-empty-scene" aria-label="目前沒有開放訂單"><div class="order-empty-sun" aria-hidden="true"></div><svg class="order-empty-tree left" viewBox="0 0 560 520" aria-hidden="true"><path stroke-width="17" d="M34 518C90 448 95 370 117 307c31-87 71-145 137-201"/><path stroke-width="9" d="M111 328c-7-74-3-127 19-188"/><path stroke-width="8" d="M139 272c55-31 103-74 136-128"/><path stroke-width="7" d="M165 235c89 8 158-10 220-50"/><ellipse cx="129" cy="130" rx="18" ry="10" transform="rotate(-72 129 130)"/><ellipse cx="191" cy="84" rx="20" ry="10" transform="rotate(-15 191 84)"/><ellipse cx="276" cy="44" rx="19" ry="10" transform="rotate(-38 276 44)"/><ellipse cx="227" cy="155" rx="20" ry="10" transform="rotate(12 227 155)"/><ellipse cx="384" cy="113" rx="18" ry="9" transform="rotate(-28 384 113)"/></svg><svg class="order-empty-tree right" viewBox="0 0 560 520" aria-hidden="true"><path stroke-width="17" d="M34 518C90 448 95 370 117 307c31-87 71-145 137-201"/><path stroke-width="8" d="M139 272c55-31 103-74 136-128"/><path stroke-width="7" d="M165 235c89 8 158-10 220-50"/><ellipse cx="191" cy="84" rx="20" ry="10" transform="rotate(-15 191 84)"/><ellipse cx="276" cy="44" rx="19" ry="10" transform="rotate(-38 276 44)"/><ellipse cx="329" cy="139" rx="20" ry="10" transform="rotate(-18 329 139)"/></svg><div class="order-empty-card"><div class="order-empty-symbol">休</div><div class="order-empty-eyebrow">SEE YOU AGAIN</div><div class="order-empty-divider" aria-hidden="true"><span></span></div><div class="order-empty-copy">目前沒有開放中的訂單</div></div></section>`;
+};
 </script>
 </body>
 </html>
