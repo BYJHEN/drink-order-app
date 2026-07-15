@@ -1254,27 +1254,5 @@ menu=function(){
   localTabs.remove();
 };
 </script>
-<style>
-  #tabs.menu-category-host{position:-webkit-sticky!important;position:sticky!important;z-index:13!important;width:100%;max-width:none;margin:0;padding:9px 14px 10px;overflow-x:auto!important;overflow-y:hidden;background:rgba(249,247,241,.97);border-bottom:1px solid rgba(220,216,204,.9);box-shadow:0 7px 14px rgba(84,79,67,.08);scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  #tabs.menu-category-host::-webkit-scrollbar{display:none}#tabs.menu-category-host .tab{flex:0 0 auto}
-</style>
-<script>
-const menuWithPinnedCategoryHost=menu;
-menu=function(){
-  menuWithPinnedCategoryHost();
-  const host=$('#tabs'),local=$('#view')?.querySelector('.menu-tabs-sticky');
-  if(local){host.replaceChildren(...[...local.children]);local.remove()}
-  if(!host.querySelector('.tab[data-section]'))return;
-  host.className='tabs menu-category-host';
-  host.style.top=(document.querySelector('.top')?.getBoundingClientRect().height||0)+'px';
-  host.classList.remove('hidden');
-};
-const adminWithoutPinnedCategories=admin;
-admin=function(){
-  const host=$('#tabs');host.classList.remove('menu-category-host','mobile-menu-tabs-host');host.style.top='';
-  return adminWithoutPinnedCategories();
-};
-window.addEventListener('resize',()=>{const host=$('#tabs');if(host?.classList.contains('menu-category-host'))host.style.top=(document.querySelector('.top')?.getBoundingClientRect().height||0)+'px'});
-</script>
 </body>
 </html>
