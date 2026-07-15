@@ -1336,6 +1336,7 @@ menu=function(){
 <style>
   @media (max-width:767px){
     #tabs.mobile-menu-tabs-host.mobile-tabs-pinned{position:fixed!important;z-index:25!important;margin:0!important}
+    #tabs.mobile-menu-tabs-host.mobile-tabs-suspended{position:static!important;top:auto!important}
   }
 </style>
 <script id="mobile-category-tabs-fixed-fallback">
@@ -1355,6 +1356,12 @@ menu=function(){
     const host=document.querySelector('#tabs.mobile-menu-tabs-host');
     const header=document.querySelector('.top');
     if(!isMobile()||state.page!=='menu'||!host||!header){clear();return}
+    if(document.querySelector('#modal .menu-preview-modal')){
+      clear();
+      host.classList.add('mobile-tabs-suspended');
+      return;
+    }
+    host.classList.remove('mobile-tabs-suspended');
     if(pinnedHost&&pinnedHost!==host)clear();
     const anchor=placeholder||host;
     const headerBottom=header.getBoundingClientRect().bottom;
