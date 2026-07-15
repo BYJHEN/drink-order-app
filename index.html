@@ -1199,5 +1199,43 @@ home=function(){
   $('#view').innerHTML=`<section class="order-empty-scene" aria-label="目前沒有開放訂單"><div class="order-empty-sun" aria-hidden="true"></div><svg class="order-empty-tree left" viewBox="0 0 560 520" aria-hidden="true"><path stroke-width="17" d="M34 518C90 448 95 370 117 307c31-87 71-145 137-201"/><path stroke-width="9" d="M111 328c-7-74-3-127 19-188"/><path stroke-width="8" d="M139 272c55-31 103-74 136-128"/><path stroke-width="7" d="M165 235c89 8 158-10 220-50"/><ellipse cx="129" cy="130" rx="18" ry="10" transform="rotate(-72 129 130)"/><ellipse cx="191" cy="84" rx="20" ry="10" transform="rotate(-15 191 84)"/><ellipse cx="276" cy="44" rx="19" ry="10" transform="rotate(-38 276 44)"/><ellipse cx="227" cy="155" rx="20" ry="10" transform="rotate(12 227 155)"/><ellipse cx="384" cy="113" rx="18" ry="9" transform="rotate(-28 384 113)"/></svg><svg class="order-empty-tree right" viewBox="0 0 560 520" aria-hidden="true"><path stroke-width="17" d="M34 518C90 448 95 370 117 307c31-87 71-145 137-201"/><path stroke-width="8" d="M139 272c55-31 103-74 136-128"/><path stroke-width="7" d="M165 235c89 8 158-10 220-50"/><ellipse cx="191" cy="84" rx="20" ry="10" transform="rotate(-15 191 84)"/><ellipse cx="276" cy="44" rx="19" ry="10" transform="rotate(-38 276 44)"/><ellipse cx="329" cy="139" rx="20" ry="10" transform="rotate(-18 329 139)"/></svg><div class="order-empty-card"><div class="order-empty-symbol">休</div><div class="order-empty-eyebrow">SEE YOU AGAIN</div><div class="order-empty-divider" aria-hidden="true"><span></span></div><div class="order-empty-copy">目前沒有開放中的訂單</div></div></section>`;
 };
 </script>
+<style>
+  .menu-tabs-floating{position:fixed!important;margin:0!important;z-index:12!important}
+</style>
+<script>
+(()=>{
+  let placeholder=null,frame=0;
+  const reset=tabs=>{
+    tabs?.classList.remove('menu-tabs-floating');
+    if(tabs){tabs.style.left='';tabs.style.top='';tabs.style.width=''}
+    placeholder?.remove();placeholder=null;
+  };
+  const update=()=>{
+    frame=0;
+    if(placeholder&&!placeholder.isConnected)placeholder=null;
+    const tabs=document.querySelector('.menu-tabs-sticky');
+    if(!tabs||state.page!=='menu'){reset(tabs);return}
+    const top=document.querySelector('.top')?.getBoundingClientRect().height||0;
+    const anchor=(placeholder||tabs).getBoundingClientRect();
+    if(!placeholder&&anchor.top<=top){
+      placeholder=document.createElement('div');
+      placeholder.style.height=anchor.height+'px';
+      placeholder.style.margin='0 -16px 10px';
+      tabs.parentNode.insertBefore(placeholder,tabs);
+    }
+    if(placeholder){
+      const rect=placeholder.getBoundingClientRect();
+      tabs.classList.add('menu-tabs-floating');
+      tabs.style.left=rect.left+'px';tabs.style.top=top+'px';tabs.style.width=rect.width+'px';
+      if(rect.top>top+2)reset(tabs);
+    }
+  };
+  const queue=()=>{if(!frame)frame=requestAnimationFrame(update)};
+  window.addEventListener('scroll',queue,{passive:true});
+  window.addEventListener('resize',queue);
+  document.addEventListener('click',()=>setTimeout(queue,0),true);
+  setInterval(queue,700);
+})();
+</script>
 </body>
 </html>
