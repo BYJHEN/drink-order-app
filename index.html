@@ -137,6 +137,70 @@ body.modal-open{overflow:hidden;touch-action:none}
 }
 </style>
 
+
+<style id="v12-responsive-ui">
+/* v12 responsive desktop/tablet layout; mobile appearance remains unchanged */
+:root{--desktop-max:1180px;--content-max:1120px}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%;max-width:var(--desktop-max);margin-inline:auto}
+.top,.adminbar{width:100%}
+.page{width:100%;max-width:var(--content-max);margin-inline:auto}
+.bottomin{width:min(var(--desktop-max),100%)}
+.card,.menu-block,.builder-section,.summary{overflow-wrap:anywhere}
+img,video,canvas,svg,object,embed,iframe{max-width:100%;height:auto}
+.form input,.form select,.form textarea{min-width:0}
+
+@media (min-width:768px){
+  body{font-size:15px}
+  .app{padding-bottom:84px}
+  .top{padding:20px 28px 16px;border-radius:0 0 18px 18px}
+  .brand{font-size:25px}
+  .page{padding:22px 26px 28px}
+  .card{padding:20px;border-radius:16px}
+  .tabs{max-width:var(--content-max);margin-inline:auto;padding-inline:26px}
+  .adminbar{padding-inline:28px}
+  .filters{grid-template-columns:minmax(280px,1fr) 180px}
+  .modalbox{width:min(620px,92vw)}
+  .menu-preview-box{width:min(1000px,94vw)!important}
+}
+
+@media (min-width:1024px){
+  body{background:linear-gradient(180deg,#f1efe8 0,#f7f5ef 260px,#f5f3ed 100%)}
+  .app{max-width:var(--desktop-max);background:var(--bg);box-shadow:0 0 0 1px rgba(90,84,70,.06),0 18px 55px rgba(70,64,50,.08)}
+  .top{position:sticky;padding:18px 32px 15px}
+  .page{padding:24px 32px 34px}
+  .card{transition:transform .16s ease,box-shadow .16s ease}
+  .card:hover{box-shadow:0 8px 24px rgba(74,68,54,.10)}
+  .btn{transition:transform .12s ease,filter .12s ease}
+  .btn:hover{transform:translateY(-1px);filter:brightness(.98)}
+  .btn.full{width:auto;min-width:180px}
+  .form>.btn.full{display:block;margin-left:auto}
+  .builder-section{padding:16px}
+  .menu-block{padding:16px}
+  .builder-row{grid-template-columns:minmax(220px,1fr) 46px minmax(120px,180px) 42px;gap:10px;align-items:end}
+  .builder-row.group-name{grid-template-columns:minmax(220px,1fr) auto}
+  .builder-actions{justify-content:flex-end}
+  .builder-field input,.builder-field select{min-height:42px}
+  .bottom{background:rgba(255,254,250,.96);backdrop-filter:blur(12px)}
+  .bottomin{max-width:760px}
+  .nav{padding:9px 8px 11px}
+  .nav span{font-size:19px}
+  .store-head{align-items:center}
+  .adminlist{gap:10px}
+}
+
+@media (min-width:1280px){
+  :root{--desktop-max:1240px;--content-max:1160px}
+  .page{padding-inline:36px}
+  .top{padding-inline:36px}
+}
+
+@media (max-width:767px){
+  .app,.page{max-width:none}
+  .btn.full{width:100%}
+}
+</style>
+
 </head>
 <body>
 <main class="app">
@@ -154,7 +218,7 @@ body.modal-open{overflow:hidden;touch-action:none}
 <div id="modal"></div><button id="syncStatus" class="sync-status warn" type="button" onclick="manualSync()">連線中</button><div id="toast" class="toast" role="status" aria-live="polite"></div>
 <script>
 const KEY='together-order-v1';
-const APP_VERSION='v1.0.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
+const APP_VERSION='v12.0.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
 const SUPABASE_URL='https://duwinxwcovmplqqkizrk.supabase.co';
 const SUPABASE_KEY='sb_publishable_fRwQthTt4FyTSK3AbVu3nQ_Ou_NWItt';
 const EMPTY={password:'20260713',stores:[],groups:[],orders:[]};
