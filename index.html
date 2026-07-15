@@ -853,7 +853,7 @@ body{touch-action:auto!important}
       <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddPriceRow('${bid}','${it.id}')">＋ 分量與價格</button>
       <div style="margin-top:14px"><div class="between" style="align-items:center;gap:8px;flex-wrap:wrap"><b>其他規格（選填）</b><div class="builder-actions" style="margin-top:0"><button type="button" class="btn light smallbtn" onclick="builderSetAllGroupsCollapse('${bid}','${it.id}',true)">一鍵摺疊</button><button type="button" class="btn light smallbtn" onclick="builderSetAllGroupsCollapse('${bid}','${it.id}',false)">一鍵展開</button></div></div><div class="builder-muted">例如加料、辣度、甜度；系統會自動加入「=+」。</div></div>
       <div>${it.groups.map(g=>extraGroupEditor(bid,it.id,g)).join('')}</div>
-      <div class="builder-actions" style="margin-top:8px"><button type="button" class="btn light smallbtn builder-add" onclick="builderAddGroup('${bid}','${it.id}')">＋ 其他規格欄位</button><button type="button" class="btn light smallbtn builder-add" onclick="builderCopyPreviousItemSpecs('${bid}','${it.id}')">＋ 同前品項規格</button></div>
+      <div class="builder-actions" style="margin-top:8px;justify-content:flex-start;width:100%"><button type="button" class="btn light smallbtn builder-add" onclick="builderAddGroup('${bid}','${it.id}')">＋ 其他規格欄位</button><button type="button" class="btn light smallbtn builder-add" onclick="builderCopyPreviousItemSpecs('${bid}','${it.id}')">＋ 同前品項規格</button></div>
     </article>`;
   }
   function priceRowEditor(bid,iid,r){return `<div class="builder-row">
@@ -999,7 +999,7 @@ body{touch-action:auto!important}
     const start=html.indexOf('<div id="fullMenuFields"');
     const button=html.indexOf('<button class="btn full"',start);
     if(start>=0&&button>start){
-      const replacement=`<div id="fullMenuFields" class="${(state.storeBuildMode||'full')==='full'?'':'hidden'}"><div class="between" style="align-items:center;gap:8px;flex-wrap:wrap"><label style="margin:0">餐點內容${reqMark()}</label><div class="builder-actions" style="margin:0"><button type="button" class="btn light smallbtn" onclick="builderSetAllBlocksCollapse(true)">一鍵摺疊</button><button type="button" class="btn light smallbtn" onclick="builderSetAllBlocksCollapse(false)">一鍵展開</button></div></div><div class="summary"><b>欄位式菜單編輯</b></div><div id="menuBuilder"></div></div>`;
+      const replacement=`<div id="fullMenuFields" class="${(state.storeBuildMode||'full')==='full'?'':'hidden'}"><label>注意事項（選填）</label><textarea id="smenuNotice" rows="2" placeholder="例如：孕婦不能食用、過敏原或其他提醒"></textarea><div class="between" style="align-items:center;gap:8px;flex-wrap:wrap"><label style="margin:14px 0 0">餐點內容${reqMark()}</label><div class="builder-actions" style="margin:14px 0 0"><button type="button" class="btn light smallbtn" onclick="builderSetAllBlocksCollapse(true)">一鍵摺疊</button><button type="button" class="btn light smallbtn" onclick="builderSetAllBlocksCollapse(false)">一鍵展開</button></div></div><div class="summary"><b>欄位式菜單編輯</b></div><div id="menuBuilder"></div></div>`;
       html=html.slice(0,start)+replacement+html.slice(button);
     }
     setTimeout(renderMenuBuilder,0);return html;
@@ -1010,19 +1010,20 @@ body{touch-action:auto!important}
     if((state.storeBuildMode||'full')!=='full')return oldCreateStore();
     let raw;try{raw=builderToText()}catch(e){return alert(e.message)}
     const itemNotices=ensureBuilder().flatMap(b=>b.items.map(i=>i.notice||''));
+    const menuNotice=document.querySelector('#smenuNotice')?.value.trim()||'';
     const targetId=document.querySelector('#sname')?.dataset.id;
     if(!cleanText(document.querySelector('#sname')?.value))return alert('請輸入店家名稱');
     let hidden=document.querySelector('#sitems');if(!hidden){hidden=document.createElement('textarea');hidden.id='sitems';hidden.className='hidden';document.querySelector('#fullMenuFields')?.appendChild(hidden)}hidden.value=raw;
     const result=oldCreateStore();
     const target=targetId?store(targetId):data.stores[data.stores.length-1];
-    if(target?.items){target.items.forEach((item,index)=>item.notice=itemNotices[index]||'');save()}
+    if(target?.items){target.items.forEach((item,index)=>item.notice=itemNotices[index]||'');target.menuNotice=menuNotice;save()}
     state.menuBuilder=[blankBlock('')];
     return result;
   };
 
   const oldEditStore=window.editStore;
   window.editStore=function(id){
-    const s=store(id);state.menuBuilder=itemsToBuilder(s?.items||[]);oldEditStore(id);setTimeout(renderMenuBuilder,0)
+    const s=store(id);state.menuBuilder=itemsToBuilder(s?.items||[]);oldEditStore(id);setTimeout(()=>{const notice=document.querySelector('#smenuNotice');if(notice)notice.value=s?.menuNotice||'';renderMenuBuilder()},0)
   };
 
   const oldSetMode=window.setStoreBuildMode;
@@ -1131,36 +1132,19 @@ body{touch-action:auto!important}
 </script>
 <style>
   /* The menu-category row must remain horizontally scrollable on both touch and desktop devices. */
-  .menu-tabs-sticky{overflow-x:auto!important;overflow-y:hidden!important;touch-action:pan-x!important;cursor:grab;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-  .menu-tabs-sticky:active{cursor:grabbing}
+  .menu-tabs-sticky{display:flex!important;max-width:100%;overflow-x:auto!important;overflow-y:hidden!important;touch-action:pan-x!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
   .menu-tabs-sticky .tab{flex:0 0 auto;touch-action:pan-x!important}
 </style>
+<style>
+  .menu-global-notice{margin:0 0 12px;padding:9px 11px;border-radius:8px;background:#f3f0e7;color:#625d4f;font-size:13px;line-height:1.5;white-space:pre-line}
+</style>
 <script>
-(()=>{
-  let drag=null;
-  document.addEventListener('pointerdown',e=>{
-    const tabs=e.target.closest?.('.menu-tabs-sticky');
-    if(!tabs)return;
-    drag={tabs,pointerId:e.pointerId,x:e.clientX,left:tabs.scrollLeft,moved:false};
-    tabs.setPointerCapture?.(e.pointerId);
-  },true);
-  document.addEventListener('pointermove',e=>{
-    if(!drag||e.pointerId!==drag.pointerId)return;
-    const distance=e.clientX-drag.x;
-    if(Math.abs(distance)>3){drag.moved=true;drag.tabs.scrollLeft=drag.left-distance;e.preventDefault()}
-  },{capture:true,passive:false});
-  const finish=e=>{
-    if(!drag||e.pointerId!==drag.pointerId)return;
-    const {tabs,moved}=drag;drag=null;
-    if(moved){tabs.dataset.dragged='1';setTimeout(()=>delete tabs.dataset.dragged,0)}
-  };
-  document.addEventListener('pointerup',finish,true);
-  document.addEventListener('pointercancel',finish,true);
-  document.addEventListener('click',e=>{
-    const tabs=e.target.closest?.('.menu-tabs-sticky');
-    if(tabs?.dataset.dragged){e.preventDefault();e.stopPropagation()}
-  },true);
-})();
+const menuWithGlobalNotice=menu;
+menu=function(){
+  menuWithGlobalNotice();
+  const g=group(state.group),s=g&&store(g.storeId),notice=s?.menuNotice?.trim(),tabs=$('#view')?.querySelector('.menu-tabs-sticky');
+  if(notice&&tabs&&!$('#menuGlobalNotice'))tabs.insertAdjacentHTML('afterend',`<div id="menuGlobalNotice" class="menu-global-notice">${esc(notice)}</div>`);
+};
 </script>
 </body>
 </html>
