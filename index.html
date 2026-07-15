@@ -942,5 +942,97 @@ body{touch-action:auto!important}
 })();
 </script>
 
+
+<script id="v12-2-store-draft-autosave">
+(()=>{
+  const DRAFT_KEY=(typeof KEY==='string'?KEY:'together-order')+'-store-form-draft-v2';
+  let draftTimer=null, restoringDraft=false, suppressDraft=false;
+  const clone=v=>{try{return structuredClone(v)}catch(_){return JSON.parse(JSON.stringify(v))}};
+  const fieldValue=id=>document.querySelector('#'+id)?.value??'';
+
+  function isStoreFormOpen(){
+    return state?.page==='admin'&&state?.adminTab===1&&!!document.querySelector('#sname');
+  }
+  function currentDraft(){
+    if(!isStoreFormOpen())return null;
+    const filehint=document.querySelector('#filehint');
+    return {
+      savedAt:Date.now(),
+      editId:document.querySelector('#sname')?.dataset?.id||'',
+      mode:state.storeBuildMode||'full',
+      fields:{
+        name:fieldValue('sname'),category:fieldValue('scat'),phone:fieldValue('sphone'),
+        address:fieldValue('saddress'),method:fieldValue('smethod'),note:fieldValue('snote')
+      },
+      menuBuilder:Array.isArray(state.menuBuilder)?clone(state.menuBuilder):null,
+      // 附件內容可能很大，不寫入草稿；已儲存店家的原附件不受影響。
+      fileNames:(()=>{try{return JSON.parse(filehint?.dataset?.files||'[]').map(f=>f.name||'菜單')}catch(_){return []}})()
+    };
+  }
+  function saveStoreDraft(){
+    if(restoringDraft||suppressDraft)return;
+    const draft=currentDraft();if(!draft)return;
+    const hasContent=draft.editId||Object.values(draft.fields).some(v=>String(v).trim())||
+      draft.menuBuilder?.some(b=>String(b.title||'').trim()||b.items?.some(i=>String(i.name||'').trim()||i.priceRows?.some(r=>String(r.label||'').trim()||String(r.price||'').trim())||i.groups?.length));
+    try{
+      if(hasContent)localStorage.setItem(DRAFT_KEY,JSON.stringify(draft));
+      else localStorage.removeItem(DRAFT_KEY);
+    }catch(e){console.warn('店家草稿暫存失敗',e)}
+  }
+  function scheduleDraft(){clearTimeout(draftTimer);draftTimer=setTimeout(saveStoreDraft,180)}
+  function readDraft(){try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||'null')}catch(_){return null}}
+  function clearStoreDraft(){clearTimeout(draftTimer);localStorage.removeItem(DRAFT_KEY)}
+
+  function restoreStoreDraft(){
+    if(!isStoreFormOpen())return;
+    const d=readDraft();if(!d)return;
+    restoringDraft=true;
+    try{
+      state.storeBuildMode=d.mode||'full';
+      const set=(id,v)=>{const el=document.querySelector('#'+id);if(el)el.value=v??''};
+      set('sname',d.fields?.name);set('scat',d.fields?.category);set('sphone',d.fields?.phone);
+      set('saddress',d.fields?.address);set('smethod',d.fields?.method);set('snote',d.fields?.note);
+      const name=document.querySelector('#sname');if(name){if(d.editId)name.dataset.id=d.editId;else delete name.dataset.id}
+      if(Array.isArray(d.menuBuilder)&&d.menuBuilder.length){state.menuBuilder=clone(d.menuBuilder);window.renderMenuBuilder?.()}
+      window.setStoreBuildMode?.(state.storeBuildMode);
+      const hint=document.querySelector('#filehint');
+      if(hint&&d.fileNames?.length&&!hint.dataset.files)hint.insertAdjacentHTML('beforeend',`<div class="builder-muted">先前選擇的附件需重新選取：${d.fileNames.map(esc).join('、')}</div>`);
+    }finally{restoringDraft=false}
+  }
+
+  document.addEventListener('input',e=>{if(e.target.closest?.('#view')&&isStoreFormOpen())scheduleDraft()},true);
+  document.addEventListener('change',e=>{if(e.target.closest?.('#view')&&isStoreFormOpen())scheduleDraft()},true);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)saveStoreDraft();else setTimeout(restoreStoreDraft,80)},true);
+  window.addEventListener('pagehide',saveStoreDraft,{capture:true});
+  window.addEventListener('beforeunload',saveStoreDraft,{capture:true});
+  window.addEventListener('pageshow',()=>setTimeout(restoreStoreDraft,80));
+
+  // 所有欄位式編輯器操作後也立即保存，包含新增／刪除／複製規格。
+  const builderFns=['builderSetBlock','builderSetItem','builderSetPrice','builderSetGroup','builderToggleGroupNoPrice','builderSetGroupRow','builderAddPriceRow','builderRemovePrice','builderAddGroup','builderRemoveGroup','builderAddGroupRow','builderRemoveGroupRow','builderAddItem','builderRemoveItem','builderAddBlockAfter','builderRemoveBlock'];
+  setTimeout(()=>builderFns.forEach(name=>{const fn=window[name];if(typeof fn!=='function'||fn.__draftWrapped)return;const wrapped=function(...args){const r=fn.apply(this,args);scheduleDraft();return r};wrapped.__draftWrapped=true;window[name]=wrapped}),0);
+
+  const previousAdmin=window.admin;
+  window.admin=function(...args){const r=previousAdmin.apply(this,args);if(state.adminTab===1)setTimeout(restoreStoreDraft,40);return r};
+
+  const previousEdit=window.editStore;
+  window.editStore=function(id,...args){
+    suppressDraft=true;clearStoreDraft();
+    try{return previousEdit.call(this,id,...args)}finally{suppressDraft=false;setTimeout(saveStoreDraft,120)}
+  };
+
+  const previousCreate=window.createStore;
+  window.createStore=function(...args){
+    saveStoreDraft();
+    const before=(data.stores||[]).map(s=>s.id+'|'+s.name+'|'+(s.items?.length||0)).join('~');
+    const r=previousCreate.apply(this,args);
+    const after=(data.stores||[]).map(s=>s.id+'|'+s.name+'|'+(s.items?.length||0)).join('~');
+    if(after!==before){suppressDraft=true;clearStoreDraft();state.menuBuilder=null;setTimeout(()=>{suppressDraft=false},0)}
+    return r;
+  };
+
+  window.clearStoreDraft=clearStoreDraft;
+  setTimeout(restoreStoreDraft,120);
+})();
+</script>
 </body>
 </html>
