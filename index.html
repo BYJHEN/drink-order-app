@@ -568,7 +568,7 @@ admin=function(){
 function wantedHtml(orders){
   const people=[...new Set(orders.filter(o=>!o.paid).map(o=>o.buyer).filter(Boolean))]
     .sort(()=>Math.random()-.5).slice(0,2);
-  return `<div class="wanted">${people.length?people.map(esc).join(' ')+' 🐔🔑🍌👛 🙏':'從缺'}</div>`;
+  return people.length?`<div class="wanted">${people.map(esc).join(' ')} 🐔🔑🍌👛 🙏</div>`:'';
 }
 
 function adminGroups(){
