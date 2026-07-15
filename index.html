@@ -1202,6 +1202,7 @@ home=function(){
 <style>
   .menu-tabs-floating{position:fixed!important;margin:0!important;z-index:12!important}
   @media(max-width:560px){.page{contain:style!important}.menu-tabs-sticky{position:-webkit-sticky!important;position:sticky!important;top:76px!important}}
+  @media(max-width:767px){#tabs.mobile-menu-tabs-host{position:-webkit-sticky!important;position:sticky!important;top:76px!important;z-index:12!important;width:100%;max-width:none;margin:0;padding:9px 14px 10px;overflow-x:auto!important;overflow-y:hidden;background:rgba(249,247,241,.97);border-bottom:1px solid rgba(220,216,204,.9);box-shadow:0 7px 14px rgba(84,79,67,.08);scrollbar-width:none;-webkit-overflow-scrolling:touch}#tabs.mobile-menu-tabs-host::-webkit-scrollbar{display:none}#tabs.mobile-menu-tabs-host .tab{flex:0 0 auto}}
 </style>
 <script>
 (()=>{
@@ -1239,6 +1240,19 @@ home=function(){
   document.addEventListener('click',()=>setTimeout(queue,0),true);
   setInterval(queue,700);
 })();
+</script>
+<script>
+const menuWithMobileTabHost=menu;
+menu=function(){
+  menuWithMobileTabHost();
+  if(!window.matchMedia('(max-width: 767px)').matches)return;
+  const localTabs=$('#view')?.querySelector('.menu-tabs-sticky'),host=$('#tabs');
+  if(!localTabs||!host)return;
+  host.className='tabs mobile-menu-tabs-host';
+  host.replaceChildren(...[...localTabs.children]);
+  host.classList.remove('hidden');
+  localTabs.remove();
+};
 </script>
 </body>
 </html>
