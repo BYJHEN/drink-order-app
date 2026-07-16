@@ -267,7 +267,7 @@ function orderLines(o){return o.items.map(x=>`<div class="item-line"><span>${esc
 function historySpec(spec){return String(spec||'單一規格').replace(/(?:^|[、，]\s*)[^、，:：]+[：:]/g,' ').replace(/[、，]/g,' ').replace(/\s+/g,' ').trim()||'單一規格'}
 function historyLines(o){return o.items.map(x=>{const price=Number(x.price||0),qty=Number(x.qty)||0;return `<div class="history-item"><span class="history-text">${esc(x.name)}／${esc(historySpec(x.spec))}</span><span class="history-price">$${price.toLocaleString()}</span><span class="history-qty">× ${qty}</span><span class="history-price">總額 $${(price*qty).toLocaleString()}</span><span class="pill ${o.paid?'paid':'unpaid'}">${o.paid?'已付款':'未付款'}</span></div>`}).join('')}
 function historyGroup(g){const s=store(g.storeId)||{},orders=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));return `<article class="card"><div class="group-title"><div><h3>${esc(s.name||'已刪除店家')}</h3><div class="group-meta">開團者：${esc(g.creator||'未填寫')}・${isOpen(g)?'收單 '+fmt(g.deadline):'已於 '+fmt(g.deadline)+' 結束'}</div></div><span class="pill ${isOpen(g)?'paid':'unpaid'}">${isOpen(g)?'本次團購':'過往團購'}</span></div>${orders.map(o=>`<div class="order"><b>${esc(o.buyer)}</b>${historyLines(o)}<div class="small">訂購時間：${fmt(o.createdAt)}</div></div>`).join('')||'<div class="empty">這次團購還沒有訂單</div>'}</article>`}
-function history(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const ended=data.groups.filter(g=>!isOpen(g)).sort((a,b)=>new Date(b.deadline)-new Date(a.deadline)).slice(0,2);const shown=[...active,...ended];const shownOrders=data.orders.filter(o=>shown.some(g=>g.id===o.groupId));$('#headline').textContent='本次與最近兩次團購';$('#view').innerHTML=wantedHtml(shownOrders)+(shown.length?shown.map(historyGroup).join(''):`<div class="empty"><b>還沒有歷史訂單</b>完成點餐後，訂單會顯示在這裡。</div>`)}
+function history(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const ended=data.groups.filter(g=>!isOpen(g)).sort((a,b)=>new Date(b.deadline)-new Date(a.deadline)).slice(0,2);const shown=[...active,...ended];const shownOrders=data.orders.filter(o=>shown.some(g=>g.id===o.groupId));$('#headline').textContent='本次與最近兩次團購';$('#view').innerHTML=wantedHtml(shownOrders,shown)+(shown.length?shown.map(historyGroup).join(''):`<div class="empty"><b>還沒有歷史訂單</b>完成點餐後，訂單會顯示在這裡。</div>`)}
 function openAdmin(){$('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>管理登入</h2><label>管理密碼</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="請輸入管理密碼" onkeydown="if(event.key==='Enter')doAdminLogin()"><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn" onclick="doAdminLogin()">登入</button></div></div></div>`;setTimeout(()=>$('#adminPassword')?.focus(),0)}
 function doAdminLogin(){if($('#adminPassword').value!==data.password)return alert('密碼錯誤');closeModal();state.page='admin';render()}
 function logout(){state.page='home';render()}
@@ -292,9 +292,9 @@ function previewStore(id){const s=store(id);$('#modal').innerHTML=`<div class="m
 function showMenuFile(id){const s=store(id);const content=s.importData?.startsWith('data:application/pdf')?`<object data="${s.importData}" type="application/pdf" style="width:100%;height:65vh">無法預覽 PDF</object>`:`<img src="${s.importData}" alt="${esc(s.importName||'菜單')}" style="width:100%;max-height:70vh;object-fit:contain">`;$('#modal').innerHTML=`<div class="modal"><div class="modalbox" style="width:min(900px,100%)"><button class="btn light smallbtn" style="float:right" onclick="closeModal()">關閉</button><h2>${esc(s.name)}菜單</h2>${content}</div></div>`}
 function adminOrders(){const tabs=`<div class="tabs" style="padding:0 0 14px"><button class="tab ${state.orderTab===0?'on':''}" onclick="state.orderTab=0;admin()">每次開團</button><button class="tab ${state.orderTab===1?'on':''}" onclick="state.orderTab=1;admin()">過往開團</button></div>`;return `<h2 class="section-title">訂單管理</h2>${tabs}${state.orderTab===0?currentOrdersAdmin():pastOrdersAdmin()}`}
 function aggregate(os){const map={};os.forEach(o=>o.items.forEach(x=>{const k=x.name+'／'+(x.spec||'單一規格');map[k]=(map[k]||0)+(Number(x.qty)||0)}));return map}
-function currentOrdersAdmin(){const date=state.orderDate||localDate(new Date());const groups=data.groups.filter(g=>localDate(g.createdAt)===date).sort((a,b)=>(store(a.storeId)?.name||'').localeCompare(store(b.storeId)?.name||'','zh-Hant'));const allOrders=groups.flatMap(g=>data.orders.filter(o=>o.groupId===g.id));return `<div class="card form"><label style="margin-top:0">開團日期</label><input type="date" value="${date}" onchange="state.orderDate=this.value;admin()"></div>${groups.map(g=>adminGroupCard(g,true)).join('')||'<div class="empty">這一天沒有開團紀錄</div>'}<div class="card total"><span>當日所有訂單總金額</span><span>NT$ ${allOrders.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</span></div>`}
+function currentOrdersAdmin(){const date=state.orderDate||localDate(new Date());const groups=data.groups.filter(g=>localDate(g.createdAt)===date).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const allOrders=groups.flatMap(g=>data.orders.filter(o=>o.groupId===g.id));return `<div class="card form"><label style="margin-top:0">開團日期</label><input type="date" value="${date}" onchange="state.orderDate=this.value;admin()"></div>${groups.map(g=>adminGroupCard(g,true)).join('')||'<div class="empty">這一天沒有開團紀錄</div>'}<div class="card total"><span>當日所有訂單總金額</span><span>NT$ ${allOrders.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</span></div>`}
 function adminGroupCard(g){const s=store(g.storeId)||{},os=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>{const ai=a.items[0]?.name||'',bi=b.items[0]?.name||'';return ai.localeCompare(bi,'zh-Hant')||new Date(a.createdAt)-new Date(b.createdAt)}),summary=aggregate(os);return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button></div><div class="summary"><b>品項數量加總</b><br>${Object.entries(summary).sort(([a],[b])=>a.localeCompare(b,'zh-Hant')).map(([k,v])=>`${esc(k)} × ${v}`).join('<br>')||'尚無品項'}<br><b>訂單總金額：NT$ ${os.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</b></div>${os.map(o=>`<div class="order order-grid"><b>${esc(o.buyer)}</b><div class="details">${orderLines(o)}<div class="money">NT$ ${Number(o.total||0).toLocaleString()}</div></div><div class="adminlist"><button class="pill ${o.paid?'paid':'unpaid'}" onclick="togglePay('${o.id}')">${o.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeOrder('${o.id}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`}
-function pastOrdersAdmin(){const groups=[...data.groups].sort((a,b)=>localDate(b.createdAt).localeCompare(localDate(a.createdAt))||(store(a.storeId)?.name||'').localeCompare(store(b.storeId)?.name||'','zh-Hant'));let last='';return groups.map(g=>{const d=localDate(g.createdAt),heading=d!==last?`<h3 class="date-heading">${fmt(g.createdAt,false)}</h3>`:'';last=d;return heading+adminGroupCard(g)}).join('')||'<div class="empty">尚無過往開團訂單</div>'}
+function pastOrdersAdmin(){const groups=[...data.groups].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));let last='';return groups.map(g=>{const d=localDate(g.createdAt),heading=d!==last?`<h3 class="date-heading">${fmt(g.createdAt,false)}</h3>`:'';last=d;return heading+adminGroupCard(g)}).join('')||'<div class="empty">尚無過往開團訂單</div>'}
 function togglePay(id){const o=data.orders.find(x=>x.id===id);if(!o)return;o.paid=!o.paid;save();admin()}
 function openManualOrder(groupId){const g=group(groupId),s=g&&store(g.storeId);if(!g||!s)return;$('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>手動新增訂單</h2><p class="small">${esc(s.name)}</p><label>訂購人</label><input id="manualBuyer" maxlength="30" placeholder="請輸入姓名"><label>餐點內容（每行：品項/規格/數量/單價）</label><textarea id="manualItems" placeholder="雞腿飯/正常/1/120&#10;紅茶/大杯/2/35"></textarea><div class="hint">單價會用於計算訂單總金額。</div><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn" onclick="saveManualOrder('${groupId}')">新增訂單</button></div></div></div>`}
 function saveManualOrder(groupId){const buyer=$('#manualBuyer').value.trim(),raw=$('#manualItems').value.trim();if(!buyer)return alert('請輸入訂購人');const items=raw.split(/\r?\n/).filter(Boolean).map(line=>{const [name,spec,qty,price]=line.split('/').map(x=>x.trim());return {name,spec,qty:Number(qty),price:Number(String(price||'').replace(/[^\d.]/g,''))}}).filter(x=>x.name&&x.spec&&Number.isFinite(x.qty)&&x.qty>0&&Number.isFinite(x.price)&&x.price>=0);if(!items.length||items.length!==raw.split(/\r?\n/).filter(Boolean).length)return alert('餐點格式有誤，請使用「品項/規格/數量/單價」。');data.orders.push({id:crypto.randomUUID(),groupId,buyer,items,total:items.reduce((sum,x)=>sum+x.qty*x.price,0),paid:false,createdAt:new Date().toISOString()});save();closeModal();admin()}
@@ -522,7 +522,7 @@ function historyGroup(g){const s=store(g.storeId)||{},orders=data.orders.filter(
 function home(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));$('#headline').textContent=active.length?`目前有 ${active.length} 個訂單進行中`:'目前沒有開放中的訂單';$('#view').innerHTML=active.length?active.map(g=>{const s=store(g.storeId)||{},phone=s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:'';return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name||'已刪除店家')}${phone}</h2></div><b class="deadline open">開放中</b></div><div class="deadline">${g.payee?'💲付款者：'+esc(g.payee)+'・':''}收單 ${fmt(g.deadline)}</div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button></article>`}).join(''):`<div class="empty"><b>現在沒有開放中的訂單</b>管理者開團後，就可以在這裡開始點餐。</div>`}
 function home(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));$('#headline').textContent=active.length?`目前有 ${active.length} 個訂單進行中`:'目前沒有開放中的訂單';$('#view').innerHTML=active.length?active.map(g=>{const s=store(g.storeId)||{},phone=s.phone?`<div class="small" style="margin-top:5px"><a href="tel:${esc(s.phone)}" class="badge" style="text-decoration:none">☎ ${esc(s.phone)}</a></div>`:'';return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><span class="deadline open" style="display:inline-block;margin:0 0 0 7px">收單 ${fmt(g.deadline)}</span><h2>${esc(s.name||'已刪除店家')}</h2>${phone}</div><b class="deadline open">開放中</b></div><div class="deadline">${g.payee?'💲付款者：'+esc(g.payee):''}</div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button></article>`}).join(''):`<div class="empty"><b>現在沒有開放中的訂單</b>管理者開團後，就可以在這裡開始點餐。</div>`}
 function mapHtml(address,phone=''){if(!address)return phone?`<div class="small" style="margin:8px 0">${phone}</div>`:'';const url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address),phoneBadge=phone?` <a href="tel:${esc(phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(phone)}</a>`:'';return `<div class="small" style="margin:8px 0">📍 ${esc(address)} <a href="${url}" target="_blank" rel="noopener" class="btn light smallbtn" style="display:inline-block;margin-left:4px;padding:4px 8px;text-decoration:none;vertical-align:middle">Google Maps →</a>${phoneBadge}</div>`}
-function menu(){const g=group(state.group),s=g&&store(g.storeId);if(!g||!s)return go('home');if(!isOpen(g)){alert('這個團購已經結束');return go('home')}$('#headline').textContent=s.name;const files=s.menuFiles?.length?s.menuFiles:(s.importData?[{name:s.importName||'菜單',data:s.importData}]:[]),menuButton=files.length?` <button class="btn light smallbtn" style="vertical-align:middle;margin-left:6px" onclick="showMenuFile('${s.id}')">查看店家菜單 <span style="font-size:11px;font-weight:500">(供參考，實際以店家為主)</span></button>`:'';const header=`<button class="btn light" onclick="go('home')">返回主頁</button><div class="card" style="margin-top:14px"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name)}${menuButton}</h2></div><div class="deadline open">${g.payee?'💲付款者：'+esc(g.payee)+'・':''}收單 ${fmt(g.deadline)}</div></div>${s.note?`<p class="small">${esc(s.note)}</p>`:''}${mapHtml(s.address,s.phone)}`;if(s.quickMenu){$('#view').innerHTML=`${header}<div class="summary"><b>臨時菜單點餐</b><br>請查看店家菜單後，自行填寫訂購商品。</div><button class="btn full" onclick="startQuickOrder()">開始點餐</button></div>`;return}const namedSections=[...new Set(s.items.map(x=>x.section||'其他'))],sections=['全部商品',...namedSections];if(!sections.includes(state.menuSection))state.menuSection='全部商品';const listed=s.items.map((x,i)=>Object.assign({},x,{_menuIndex:i})).filter(x=>state.menuSection==='全部商品'||(x.section||'其他')===state.menuSection),tabs=sections.length>2?`<div class="tabs" style="padding:0 0 12px">${sections.map(section=>`<button class="tab ${state.menuSection===section?'on':''}" data-section="${esc(section)}" onclick="setMenuSection(this.dataset.section)">${esc(section)}</button>`).join('')}</div>`:'';$('#view').innerHTML=`${header}<hr class="divider">${tabs}${sectionedMenuItems(listed)||'<p class="small">這間店尚未建立餐點。</p>'}</div>`}
+function menu(){const g=group(state.group),s=g&&store(g.storeId);if(!g||!s)return go('home');if(!isOpen(g)){alert('這個團購已經結束');return go('home')}$('#headline').textContent=s.name;const files=s.menuFiles?.length?s.menuFiles:(s.importData?[{name:s.importName||'菜單',data:s.importData}]:[]),menuButton=files.length?` <button class="btn light smallbtn" style="vertical-align:middle;margin-left:6px" onclick="showMenuFile('${s.id}')">查看店家菜單 <span style="font-size:11px;font-weight:500">(供參考，實際以店家為主)</span></button>`:'';const header=`<button class="btn light" onclick="go('home')">返回主頁</button><div class="card" style="margin-top:14px"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name)}${menuButton}</h2></div><div class="deadline open">收單 ${fmt(g.deadline)}</div></div>${s.note?`<p class="small">${esc(s.note)}</p>`:''}${mapHtml(s.address,s.phone)}`;if(s.quickMenu){$('#view').innerHTML=`${header}<div class="summary"><b>臨時菜單點餐</b><br>請查看店家菜單後，自行填寫訂購商品。</div><button class="btn full" onclick="startQuickOrder()">開始點餐</button></div>`;return}const namedSections=[...new Set(s.items.map(x=>x.section||'其他'))],sections=['全部商品',...namedSections];if(!sections.includes(state.menuSection))state.menuSection='全部商品';const listed=s.items.map((x,i)=>Object.assign({},x,{_menuIndex:i})).filter(x=>state.menuSection==='全部商品'||(x.section||'其他')===state.menuSection),tabs=sections.length>2?`<div class="tabs" style="padding:0 0 12px">${sections.map(section=>`<button class="tab ${state.menuSection===section?'on':''}" data-section="${esc(section)}" onclick="setMenuSection(this.dataset.section)">${esc(section)}</button>`).join('')}</div>`:'';$('#view').innerHTML=`${header}<hr class="divider">${tabs}${sectionedMenuItems(listed)||'<p class="small">這間店尚未建立餐點。</p>'}</div>`}
 function deleteStore(id){const s=store(id);if(data.groups.some(g=>g.storeId===id))return alert('這間店已有開團紀錄，不能刪除');$('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>刪除店家</h2><p class="small">請輸入管理密碼，確認刪除「${esc(s?.name||'這間店')}」。</p><label>管理密碼</label><input id="deleteStorePassword" type="password" autocomplete="current-password" placeholder="請輸入密碼"><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn danger" onclick="confirmStoreDelete('${id}')">確認刪除</button></div></div></div>`;setTimeout(()=>$('#deleteStorePassword')?.focus(),0)}
 function confirmStoreDelete(id){if($('#deleteStorePassword').value!==data.password)return alert('密碼錯誤');data.stores=data.stores.filter(s=>s.id!==id);save();closeModal();admin()}
 function adminGroupCard(g){const s=store(g.storeId)||{},os=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>{const ai=a.items[0]?.name||'',bi=b.items[0]?.name||'';return ai.localeCompare(bi,'zh-Hant')||new Date(a.createdAt)-new Date(b.createdAt)}),open=isOpen(g);return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><div style="text-align:right"><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button><div style="margin-top:7px"><span class="pill ${open?'paid':'unpaid'}">${open?'開團中':'已截止'}</span></div></div></div><div class="summary"><b>品項數量加總</b>${adminSummaryLines(os)}<br><b>訂單總金額：NT$ ${os.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</b></div>${os.map(o=>`<div class="order order-grid"><b>${esc(o.buyer)}</b><div class="details">${adminOrderLines(o)}</div><div class="adminlist"><button class="pill ${o.paid?'paid':'unpaid'}" onclick="togglePay('${o.id}')">${o.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeOrder('${o.id}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`}
@@ -565,11 +565,35 @@ admin=function(){
   adminWithStickyTabs();
   $('#tabs').classList.add('admin-tabs-sticky');
 };
-function wantedHtml(orders){
-  const people=[...new Set(orders.filter(o=>!o.paid).map(o=>o.buyer).filter(Boolean))]
-    .sort(()=>Math.random()-.5).slice(0,2);
-  return people.length?`<div class="wanted">${people.map(esc).join(' ')} 🐔🔑🍌👛 🙏</div>`:'';
+let historyTickerIndex=0,historyTickerGroups=[];
+function historyTickerMessages(groups){
+  const activeGroups=groups.filter(isOpen).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+  const activeMessages=activeGroups.map(groupItem=>{
+    const storeName=store(groupItem.storeId)?.name||'店家',deadline=new Date(groupItem.deadline),remaining=deadline.getTime()-Date.now(),date=`${deadline.getMonth()+1}/${deadline.getDate()}`;
+    if(remaining<=10*60*1000)return `🚨 ${storeName} ${date} 即將截止 速速送單!`;
+    const time=deadline.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit',hour12:false});
+    return `📢 ${storeName} ${date} ${time} 收單`;
+  });
+  const unpaidGroups=groups.filter(groupItem=>!isOpen(groupItem)&&data.orders.some(order=>order.groupId===groupItem.id&&!order.paid));
+  const payees=[...new Set(unpaidGroups.map(groupItem=>groupItem.payee?.trim()).filter(Boolean))];
+  const paymentMessages=unpaidGroups.length===1
+    ?[`${store(unpaidGroups[0].storeId)?.name||'店家'} 💰付款人：${unpaidGroups[0].payee?.trim()||'未填寫'}`]
+    :payees.length===1?[`💰付款人：${payees[0]}`]:unpaidGroups.map(groupItem=>`${store(groupItem.storeId)?.name||'店家'} 💰付款人：${groupItem.payee?.trim()||'未填寫'}`);
+  if(activeMessages.length||paymentMessages.length)return [...activeMessages,...paymentMessages];
+  return groups.length?['끝'.repeat(18)]:[];
 }
+function wantedHtml(orders,groups){
+  historyTickerGroups=groups||data.groups.filter(groupItem=>orders.some(order=>order.groupId===groupItem.id));
+  const messages=historyTickerMessages(historyTickerGroups);if(!messages.length)return '';
+  return `<div class="wanted" data-history-ticker="1">${esc(messages[historyTickerIndex%messages.length])}</div>`;
+}
+setInterval(()=>{
+  if(state.page!=='history')return;
+  const ticker=document.querySelector('[data-history-ticker]'),messages=historyTickerMessages(historyTickerGroups);
+  if(!ticker||!messages.length)return;
+  historyTickerIndex=(historyTickerIndex+1)%messages.length;
+  ticker.textContent=messages[historyTickerIndex];
+},3500);
 
 function adminGroups(){
   const rows=[...data.groups].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
@@ -611,7 +635,7 @@ function home(){
   $('#headline').textContent=active.length?`目前有 ${active.length} 個訂單進行中`:'目前沒有開放中的訂單';
   $('#view').innerHTML=active.length?active.map(g=>{
     const s=store(g.storeId)||{},phone=s.phone?`<div class="small" style="margin-top:5px"><a href="tel:${esc(s.phone)}" class="badge" style="text-decoration:none">☎ ${esc(s.phone)}</a></div>`:'',message=g.message?`<div class="group-message">${esc(g.message)}</div>`:'';
-    return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><span class="deadline open" style="display:inline-block;margin:0 0 0 7px">收單 ${fmt(g.deadline)}</span><h2>${esc(s.name||'已刪除店家')}</h2>${phone}</div><b class="deadline open">開放中</b></div><div class="deadline">${g.payee?'💲付款者：'+esc(g.payee):''}</div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button>${message}</article>`;
+    return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><span class="deadline open" style="display:inline-block;margin:0 0 0 7px">收單 ${fmt(g.deadline)}</span><h2>${esc(s.name||'已刪除店家')}</h2>${phone}</div><b class="deadline open">開放中</b></div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button>${message}</article>`;
   }).join(''):`<div class="empty"><b>現在沒有開放中的訂單</b>管理者開團後，就可以在這裡開始點餐。</div>`;
 }
 const adminGroupsWithMultilineMessage=adminGroups;
@@ -1516,27 +1540,149 @@ menu=function(){
     if(!items.length||items.length!==lines.length)return alert('餐點格式有誤，請使用「品項/規格/數量/單價」。');
     try{await insertOrder({id:crypto.randomUUID(),groupId,buyer,items,total:items.reduce((sum,item)=>sum+item.qty*item.price,0),paid:false,createdAt:new Date().toISOString()});closeModal();admin()}catch(error){alert('新增失敗，請稍後再試')}
   };
+  function cartForExistingOrder(order,menu){
+    const cart={};
+    menu.items.forEach((item,index)=>{
+      const selected=order.items.find(entry=>entry.name===item.name);
+      if(!selected)return;
+      const groups=optionGroups(item),variantsForItem=variants(item);
+      const entry={q:Number(selected.qty)||0,variant:0,options:{}};
+      if(groups.length){
+        const chosen=String(selected.spec||'').split('、').reduce((all,part)=>{const at=part.indexOf(':');if(at>0)all[part.slice(0,at)]=part.slice(at+1);return all},{});
+        groups.forEach(optionGroup=>{entry.options[optionGroup.name]=chosen[optionGroup.name]||optionGroup.values[0]||''});
+      }else{
+        const matched=variantsForItem.findIndex(variant=>variant.spec===selected.spec);
+        entry.variant=matched<0?0:matched;
+      }
+      cart[index]=entry;
+    });
+    return cart;
+  }
+  function menuItemsFromCart(menu){
+    return menu.items.flatMap((item,index)=>{
+      const cart=cartEntry(item,index);if(!cart.q)return[];
+      const groups=optionGroups(item),variant=variants(item)[cart.variant];
+      return [{name:item.name,spec:groups.length?groups.map(optionGroup=>`${optionGroup.name}:${cart.options[optionGroup.name]}`).join('、'):variant.spec,qty:cart.q,price:groups.length?selectedPrice(item,cart):variant.price}];
+    });
+  }
   window.editOwnOrder=function(id){
-    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId);if(!order||!g||!isOpen(g)||!isOwned(id))return;
-    const lines=order.items.map(item=>`${item.name}/${item.spec||''}/${item.qty}/${item.price}`).join('\n');
-    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>修改我的訂單</h2><label>訂購人</label><input id="ownBuyer" value="${esc(order.buyer)}"><label>餐點內容（每行：品項/規格/數量/單價）</label><textarea id="ownItems">${esc(lines)}</textarea><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn" onclick="saveOwnOrder('${id}')">儲存修改</button></div></div></div>`;
+    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId),menu=g&&store(g.storeId);
+    if(!order||!g||!menu||!isOpen(g)||!isOwned(id))return alert('此訂單目前無法修改');
+    state.group=g.id;state.buyer=order.buyer;state.cart=cartForExistingOrder(order,menu);state.editingOrderId=id;state.selectedItem=null;state.focusItem=null;go('menu');
+  };
+  window.cancelOwnOrderEdit=function(){
+    state.editingOrderId=null;state.cart={};state.selectedItem=null;state.focusItem=null;go('history');
   };
   window.saveOwnOrder=async function(id){
-    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId);if(!order||!g||!isOpen(g)||!isOwned(id))return alert('此訂單目前無法修改');
-    const buyer=$('#ownBuyer')?.value.trim(),lines=($('#ownItems')?.value||'').split(/\r?\n/).filter(Boolean),items=lines.map(line=>{const [name,spec,qty,price]=line.split('/').map(value=>value.trim());return {name,spec,qty:Number(qty),price:Number(price)}}).filter(item=>item.name&&Number.isInteger(item.qty)&&item.qty>0&&Number.isFinite(item.price)&&item.price>=0);
-    if(!buyer||!items.length||items.length!==lines.length)return alert('請完整填寫訂購人與餐點內容');
-    try{await patchOrder({...order,buyer,items,total:items.reduce((sum,item)=>sum+item.qty*item.price,0)});closeModal();history()}catch(error){alert('修改失敗，請稍後再試')}
+    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId),menu=g&&store(g.storeId);
+    if(!order||!g||!menu||!isOpen(g)||!isOwned(id))return alert('此訂單目前無法修改');
+    const buyer=$('#buyer')?.value.trim()||state.buyer?.trim(),items=menuItemsFromCart(menu);
+    if(!buyer)return alert('請輸入訂購人');
+    if(!items.length)return alert('請至少選擇一份餐點');
+    const button=document.activeElement?.closest?.('button'),label=button?.textContent;if(button){button.disabled=true;button.textContent='儲存中…'}
+    try{
+      await patchOrder({...order,buyer,items,total:items.reduce((sum,item)=>sum+item.qty*item.price,0)});
+      state.editingOrderId=null;state.cart={};state.selectedItem=null;state.focusItem=null;go('history');
+    }catch(error){alert('修改失敗，請稍後再試')}
+    finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent=label||'取代現有訂單'}}
   };
-  const baseHistoryGroup=historyGroup;
-  historyGroup=function(g){
-    const card=baseHistoryGroup(g);
-    if(!enabled)return card;
-    const open=isOpen(g),orders=data.orders.filter(order=>order.groupId===g.id);
-    if(!open||!orders.some(order=>isOwned(order.id)))return card;
-    return card.replace(/(<div class="small">訂購時間：[^<]+<\/div>)/g,(line)=>{
-      const matched=orders.find(order=>line.includes(fmt(order.createdAt))&&isOwned(order.id));
-      return matched?`${line}<button class="btn light smallbtn" style="margin-top:6px" onclick="editOwnOrder('${matched.id}')">修改我的訂單</button>`:line;
+  window.deleteOwnOrder=async function(id){
+    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId);
+    if(!order||!g||!isOpen(g)||!isOwned(id))return alert('此訂單目前無法刪除');
+    if(!confirm('確定要刪除這筆訂單嗎？此操作無法復原。'))return;
+    try{
+      await request(`${ORDERS_TABLE}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+      data.orders=data.orders.filter(item=>item.id!==id);persistLocal();state.editingOrderId=null;state.cart={};state.selectedItem=null;state.focusItem=null;go('history');
+    }catch(error){alert('刪除失敗，請稍後再試')}
+  };
+  const orderFormForOwnEdit=orderForm;
+  orderForm=function(){
+    orderFormForOwnEdit();
+    const id=state.editingOrderId;if(!id)return;
+    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId);
+    if(!order||!g||!isOpen(g)||!isOwned(id)){state.editingOrderId=null;return go('history')}
+    $('#headline').textContent='修改訂單';
+    const submit=$('#view .btn.full');if(submit){submit.textContent='取代現有訂單';submit.setAttribute('onclick',`saveOwnOrder('${id}')`)}
+    if(submit&&!$('#view [data-delete-own-order]')){
+      const removeButton=document.createElement('button');removeButton.className='btn danger full';removeButton.dataset.deleteOwnOrder='1';removeButton.style.marginTop='10px';removeButton.textContent='刪除訂單';removeButton.setAttribute('onclick',`deleteOwnOrder('${id}')`);submit.insertAdjacentElement('afterend',removeButton);
+    }
+  };
+  const startOrderItemForOwnEdit=startOrderItem;
+  startOrderItem=function(index){
+    if(state.editingOrderId){state.focusItem=index;state.selectedItem=index;go('order');return}
+    return startOrderItemForOwnEdit(index);
+  };
+  const menuForOwnEdit=menu;
+  menu=function(){
+    menuForOwnEdit();
+    const id=state.editingOrderId;if(!id)return;
+    const order=data.orders.find(item=>item.id===id),g=order&&group(order.groupId);
+    if(!order||!g||!isOpen(g)||!isOwned(id)){state.editingOrderId=null;return go('history')}
+    $('#headline').textContent='修改訂單';
+    const back=$('#view .btn.light');if(back){back.textContent='取消修改';back.setAttribute('onclick','cancelOwnOrderEdit()')}
+    const card=$('#view .card');
+    if(card&&!card.querySelector('[data-save-own-order]')){
+      const saveButton=document.createElement('button');saveButton.className='btn full';saveButton.dataset.saveOwnOrder='1';saveButton.style.marginTop='14px';saveButton.textContent='取代現有訂單';saveButton.setAttribute('onclick',`saveOwnOrder('${id}')`);card.appendChild(saveButton);
+      const removeButton=document.createElement('button');removeButton.className='btn danger full';removeButton.dataset.deleteOwnOrder='1';removeButton.style.marginTop='10px';removeButton.textContent='刪除訂單';removeButton.setAttribute('onclick',`deleteOwnOrder('${id}')`);card.appendChild(removeButton);
+    }
+  };
+  function mergeOrdersByBuyer(orders){
+    const merged=new Map();
+    orders.forEach(order=>{
+      const buyer=String(order.buyer||'未填寫').trim()||'未填寫',key=buyer;
+      let row=merged.get(key);
+      if(!row){row={buyer,items:[],total:0,paid:true,createdAt:order.createdAt,sourceOrders:[],_items:new Map()};merged.set(key,row)}
+      row.sourceOrders.push(order);row.total+=Number(order.total||0);row.paid=row.paid&&Boolean(order.paid);
+      if(new Date(order.createdAt)>new Date(row.createdAt))row.createdAt=order.createdAt;
+      order.items.forEach(item=>{
+        const itemKey=`${item.name}\u0001${item.spec||''}\u0001${Number(item.price||0)}`,current=row._items.get(itemKey)||{...item,qty:0};
+        current.qty+=Number(item.qty)||0;row._items.set(itemKey,current);
+      });
     });
+    return [...merged.values()].map(row=>{row.items=[...row._items.values()];delete row._items;return row}).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  }
+  async function setOrdersPaid(orders,paid){
+    if(enabled){await Promise.all(orders.map(order=>patchOrder({...order,paid})));return}
+    orders.forEach(order=>order.paid=paid);save();
+  }
+  window.markGroupPaid=async function(groupId){
+    const pending=data.orders.filter(order=>order.groupId===groupId&&!order.paid);if(!pending.length)return;
+    try{await setOrdersPaid(pending,true);admin()}catch(error){alert('標記付款失敗，請稍後再試')}
+  };
+  window.markMergedBuyerPaid=async function(groupId,encodedBuyer){
+    const buyer=decodeURIComponent(encodedBuyer),orders=data.orders.filter(order=>order.groupId===groupId&&(String(order.buyer||'').trim()||'未填寫')===buyer),paid=orders.some(order=>!order.paid);
+    try{await setOrdersPaid(orders,paid);admin()}catch(error){alert('更新付款狀態失敗，請稍後再試')}
+  };
+  window.removeMergedBuyerOrders=async function(groupId,encodedBuyer){
+    const buyer=decodeURIComponent(encodedBuyer),orders=data.orders.filter(order=>order.groupId===groupId&&(String(order.buyer||'').trim()||'未填寫')===buyer);
+    if(!orders.length||!confirm(`確定要移除「${buyer}」的 ${orders.length} 筆訂單嗎？`))return;
+    try{
+      if(enabled)await Promise.all(orders.map(order=>request(`${ORDERS_TABLE}?id=eq.${encodeURIComponent(order.id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}})));
+      data.orders=data.orders.filter(order=>!orders.some(item=>item.id===order.id));if(!enabled)save();else persistLocal();admin();
+    }catch(error){alert('移除訂單失敗，請稍後再試')}
+  };
+  function mergedHistoryLines(order,g){
+    const rows=order.sourceOrders.flatMap((source,sourceIndex)=>source.items.map((item,itemIndex)=>{
+      const price=Number(item.price||0),qty=Number(item.qty)||0,isFinal=sourceIndex===order.sourceOrders.length-1&&itemIndex===source.items.length-1;
+      const edit=isOpen(g)&&isOwned(source.id)&&itemIndex===source.items.length-1?`<button class="btn light smallbtn" style="margin-left:6px;padding:4px 7px" onclick="editOwnOrder('${source.id}')">修改</button>`:'';
+      return `<div class="history-item"><span class="history-text">${esc(item.name)}／${esc(historySpec(item.spec))}${edit}</span><span class="history-price">$${price.toLocaleString()}</span><span class="history-qty">× ${qty}</span>${isFinal?`<span class="pill ${order.paid?'paid':'unpaid'}" style="min-width:50px;text-align:center">${order.paid?'已付款':'未付款'}</span>`:'<span style="display:inline-block;width:50px"></span>'}</div>`;
+    }));
+    return rows.join('');
+  }
+  function mergedAdminLines(order){
+    const rows=order.items.map(item=>{
+      const price=Number(item.price||0),qty=Number(item.qty)||0;
+      return `<div class="history-item"><span class="history-text">${esc(item.name)}／${esc(historySpec(item.spec))}</span><span class="history-price" style="display:inline-block;width:58px;text-align:right">$ ${price.toLocaleString()}</span><span class="history-qty" style="display:inline-block;width:34px;text-align:right">× ${qty}</span></div>`;
+    });
+    return `${rows.join('')}<div class="small" style="text-align:right;margin-top:3px">總額 $${Number(order.total||0).toLocaleString()}</div>`;
+  }
+  historyGroup=function(g){
+    const s=store(g.storeId)||{},rawOrders=data.orders.filter(order=>order.groupId===g.id),orders=mergeOrdersByBuyer(rawOrders),phone=s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:'',total=rawOrders.reduce((sum,order)=>sum+Number(order.total||0),0),ending=isOpen(g)?'收單 '+fmt(g.deadline):'已於 '+fmt(g.deadline)+' 結束';
+    return `<article class="card"><div class="group-title"><div><h3>${esc(s.name||'已刪除店家')}${phone}</h3><div class="group-meta">開團者：${esc(g.creator||'未填寫')}・${ending}・${isOpen(g)?'本次訂單':'過往訂單'}</div></div></div>${rawOrders.length?`<div class="summary"><b>品項數量加總</b><br>${historySummary(rawOrders)}<br><br><b>訂單總金額：NT$ ${total.toLocaleString()}</b></div>`:''}${orders.map(order=>`<div class="order"><b>${esc(order.buyer)}</b>${mergedHistoryLines(order,g)}${order.sourceOrders.length>1?`<div class="small">已合併 ${order.sourceOrders.length} 筆訂單</div>`:''}<div class="small" style="display:flex;justify-content:space-between;gap:12px"><span>訂購時間：${fmt(order.createdAt)}</span><span>總額 $${Number(order.total||0).toLocaleString()}</span></div></div>`).join('')||'<div class="empty">這次團購還沒有訂單</div>'}</article>`;
+  };
+  adminGroupCard=function(g){
+    const s=store(g.storeId)||{},rawOrders=data.orders.filter(order=>order.groupId===g.id),orders=mergeOrdersByBuyer(rawOrders),open=isOpen(g),pending=rawOrders.some(order=>!order.paid);
+    return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><div style="text-align:right"><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button>${pending?`<button class="btn smallbtn" style="margin-left:6px" onclick="markGroupPaid('${g.id}')">一鍵標記已付款</button>`:''}<div style="margin-top:7px"><span class="pill ${open?'paid':'unpaid'}">${open?'開放中':'已結束'}</span></div></div></div><div class="summary"><b>品項數量加總</b>${adminSummaryLines(rawOrders)}<br><b>訂單總金額：NT$ ${rawOrders.reduce((sum,order)=>sum+Number(order.total||0),0).toLocaleString()}</b></div>${orders.map(order=>`<div class="order order-grid"><b>${esc(order.buyer)}</b><div class="details" style="grid-column:1 / 3;grid-row:2">${mergedAdminLines(order)}${order.sourceOrders.length>1?`<div class="small">已合併 ${order.sourceOrders.length} 筆訂單</div>`:''}</div><div class="adminlist" style="grid-column:3;grid-row:2;align-self:start"><button class="pill ${order.paid?'paid':'unpaid'}" onclick="markMergedBuyerPaid('${g.id}','${encodeURIComponent(order.buyer)}')">${order.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeMergedBuyerOrders('${g.id}','${encodeURIComponent(order.buyer)}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`;
   };
   async function loadSdk(){
     if(window.supabase?.createClient)return window.supabase;
