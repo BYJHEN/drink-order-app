@@ -522,7 +522,7 @@ function historyGroup(g){const s=store(g.storeId)||{},orders=data.orders.filter(
 function home(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));$('#headline').textContent=active.length?`目前有 ${active.length} 個訂單進行中`:'目前沒有開放中的訂單';$('#view').innerHTML=active.length?active.map(g=>{const s=store(g.storeId)||{},phone=s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:'';return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name||'已刪除店家')}${phone}</h2></div><b class="deadline open">開放中</b></div><div class="deadline">${g.payee?'💲付款者：'+esc(g.payee)+'・':''}收單 ${fmt(g.deadline)}</div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button></article>`}).join(''):`<div class="empty"><b>現在沒有開放中的訂單</b>管理者開團後，就可以在這裡開始點餐。</div>`}
 function home(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));$('#headline').textContent=active.length?`目前有 ${active.length} 個訂單進行中`:'目前沒有開放中的訂單';$('#view').innerHTML=active.length?active.map(g=>{const s=store(g.storeId)||{},phone=s.phone?`<div class="small" style="margin-top:5px"><a href="tel:${esc(s.phone)}" class="badge" style="text-decoration:none">☎ ${esc(s.phone)}</a></div>`:'';return `<article class="card"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><span class="deadline open" style="display:inline-block;margin:0 0 0 7px">收單 ${fmt(g.deadline)}</span><h2>${esc(s.name||'已刪除店家')}</h2>${phone}</div><b class="deadline open">開放中</b></div><div class="deadline">${g.payee?'💲付款者：'+esc(g.payee):''}</div><button class="btn full" onclick="state.group='${g.id}';go('menu')">查看菜單／點餐</button></article>`}).join(''):`<div class="empty"><b>現在沒有開放中的訂單</b>管理者開團後，就可以在這裡開始點餐。</div>`}
 function mapHtml(address,phone=''){if(!address)return phone?`<div class="small" style="margin:8px 0">${phone}</div>`:'';const url='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(address),phoneBadge=phone?` <a href="tel:${esc(phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(phone)}</a>`:'';return `<div class="small" style="margin:8px 0">📍 ${esc(address)} <a href="${url}" target="_blank" rel="noopener" class="btn light smallbtn" style="display:inline-block;margin-left:4px;padding:4px 8px;text-decoration:none;vertical-align:middle">Google Maps →</a>${phoneBadge}</div>`}
-function menu(){const g=group(state.group),s=g&&store(g.storeId);if(!g||!s)return go('home');if(!isOpen(g)){alert('這個團購已經結束');return go('home')}$('#headline').textContent=s.name;const files=s.menuFiles?.length?s.menuFiles:(s.importData?[{name:s.importName||'菜單',data:s.importData}]:[]),menuButton=files.length?` <button class="btn light smallbtn" style="vertical-align:middle;margin-left:6px" onclick="showMenuFile('${s.id}')">查看店家菜單 <span style="font-size:11px;font-weight:500">(供參考，實際以店家為主)</span></button>`:'';const header=`<button class="btn light" onclick="go('home')">返回主頁</button><div class="card" style="margin-top:14px"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name)}${menuButton}</h2></div><div class="deadline open">收單 ${fmt(g.deadline)}</div></div>${s.note?`<p class="small">${esc(s.note)}</p>`:''}${mapHtml(s.address,s.phone)}`;if(s.quickMenu){$('#view').innerHTML=`${header}<div class="summary"><b>臨時菜單點餐</b><br>請查看店家菜單後，自行填寫訂購商品。</div><button class="btn full" onclick="startQuickOrder()">開始點餐</button></div>`;return}const namedSections=[...new Set(s.items.map(x=>x.section||'其他'))],sections=['全部商品',...namedSections];if(!sections.includes(state.menuSection))state.menuSection='全部商品';const listed=s.items.map((x,i)=>Object.assign({},x,{_menuIndex:i})).filter(x=>state.menuSection==='全部商品'||(x.section||'其他')===state.menuSection),tabs=sections.length>2?`<div class="tabs" style="padding:0 0 12px">${sections.map(section=>`<button class="tab ${state.menuSection===section?'on':''}" data-section="${esc(section)}" onclick="setMenuSection(this.dataset.section)">${esc(section)}</button>`).join('')}</div>`:'';$('#view').innerHTML=`${header}<hr class="divider">${tabs}${sectionedMenuItems(listed)||'<p class="small">這間店尚未建立餐點。</p>'}</div>`}
+function menu(){const g=group(state.group),s=g&&store(g.storeId);if(!g||!s)return go('home');if(!isOpen(g)){alert('這個團購已經結束');return go('home')}$('#headline').textContent=s.name;const files=s.menuFiles?.length?s.menuFiles:(s.importData?[{name:s.importName||'菜單',data:s.importData}]:[]),menuLinks=files.filter(file=>/^https?:\/\//i.test(String(file.data||''))).map(file=>`<a href="${esc(file.data)}" target="_blank" rel="noopener" class="badge" style="display:inline-block;margin:5px 5px 0 0;text-decoration:none">${esc(file.name||'菜單')}</a>`).join('');const header=`<button class="btn light" onclick="go('home')">返回主頁</button><div class="card" style="margin-top:14px"><div class="store-head"><div><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name)}</h2>${menuLinks?`<div class="small">${menuLinks}</div>`:''}</div><div class="deadline open">收單 ${fmt(g.deadline)}</div></div>${s.note?`<p class="small">${esc(s.note)}</p>`:''}${mapHtml(s.address,s.phone)}`;if(s.quickMenu){$('#view').innerHTML=`${header}<div class="summary"><b>臨時菜單點餐</b><br>請點選上方菜單名稱後，自行填寫訂購商品。</div><button class="btn full" onclick="startQuickOrder()">開始點餐</button></div>`;return}const namedSections=[...new Set(s.items.map(x=>x.section||'其他'))],sections=['全部商品',...namedSections];if(!sections.includes(state.menuSection))state.menuSection='全部商品';const listed=s.items.map((x,i)=>Object.assign({},x,{_menuIndex:i})).filter(x=>state.menuSection==='全部商品'||(x.section||'其他')===state.menuSection),tabs=sections.length>2?`<div class="tabs" style="padding:0 0 12px">${sections.map(section=>`<button class="tab ${state.menuSection===section?'on':''}" data-section="${esc(section)}" onclick="setMenuSection(this.dataset.section)">${esc(section)}</button>`).join('')}</div>`:'';$('#view').innerHTML=`${header}<hr class="divider">${tabs}${sectionedMenuItems(listed)||'<p class="small">這間店尚未建立餐點。</p>'}</div>`}
 function deleteStore(id){const s=store(id);if(data.groups.some(g=>g.storeId===id))return alert('這間店已有開團紀錄，不能刪除');$('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>刪除店家</h2><p class="small">請輸入管理密碼，確認刪除「${esc(s?.name||'這間店')}」。</p><label>管理密碼</label><input id="deleteStorePassword" type="password" autocomplete="current-password" placeholder="請輸入密碼"><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn danger" onclick="confirmStoreDelete('${id}')">確認刪除</button></div></div></div>`;setTimeout(()=>$('#deleteStorePassword')?.focus(),0)}
 function confirmStoreDelete(id){if($('#deleteStorePassword').value!==data.password)return alert('密碼錯誤');data.stores=data.stores.filter(s=>s.id!==id);save();closeModal();admin()}
 function adminGroupCard(g){const s=store(g.storeId)||{},os=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>{const ai=a.items[0]?.name||'',bi=b.items[0]?.name||'';return ai.localeCompare(bi,'zh-Hant')||new Date(a.createdAt)-new Date(b.createdAt)}),open=isOpen(g);return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><div style="text-align:right"><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button><div style="margin-top:7px"><span class="pill ${open?'paid':'unpaid'}">${open?'開團中':'已截止'}</span></div></div></div><div class="summary"><b>品項數量加總</b>${adminSummaryLines(os)}<br><b>訂單總金額：NT$ ${os.reduce((a,o)=>a+Number(o.total||0),0).toLocaleString()}</b></div>${os.map(o=>`<div class="order order-grid"><b>${esc(o.buyer)}</b><div class="details">${adminOrderLines(o)}</div><div class="adminlist"><button class="pill ${o.paid?'paid':'unpaid'}" onclick="togglePay('${o.id}')">${o.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeOrder('${o.id}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`}
@@ -666,7 +666,7 @@ const PENDING_KEY=KEY+'-pending';
 let isSyncing=false, toastTimer=null;
 function toast(message){const el=$('#toast');if(!el)return;el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
 function setSyncStatus(kind,text){const el=$('#syncStatus');if(!el)return;el.className='sync-status '+kind;el.textContent=text;el.title=kind==='ok'?'資料已與雲端同步':'點擊重新同步'}
-function lightweightData(source){return normalize({...source,stores:(source.stores||[]).map(st=>({...st,importData:'',menuFiles:(st.menuFiles||[]).map(f=>({name:f.name,data:''}))}))})}
+function lightweightData(source){return normalize({...source,stores:(source.stores||[]).map(st=>{const files=(st.menuFiles||[]).map(f=>({name:f.name,data:/^https?:\/\//i.test(String(f.data||''))?f.data:''}));return {...st,importData:/^https?:\/\//i.test(String(st.importData||''))?st.importData:'',menuFiles:files}})})}
 function persistLocal(){
   const full=JSON.stringify(data);
   try{localStorage.setItem(KEY,full);return true}catch(err){
@@ -1126,7 +1126,8 @@ body{touch-action:auto!important}
       mode:state.storeBuildMode||'full',
       fields:{
         name:fieldValue('sname'),category:fieldValue('scat'),phone:fieldValue('sphone'),
-        address:fieldValue('saddress'),method:fieldValue('smethod'),note:fieldValue('snote')
+        address:fieldValue('saddress'),method:fieldValue('smethod'),note:fieldValue('snote'),
+        menuNotice:fieldValue('smenuNotice'),externalLinks:fieldValue('externalMenuLinks')
       },
       menuBuilder:Array.isArray(state.menuBuilder)?clone(state.menuBuilder):null,
       // 附件內容可能很大，不寫入草稿；已儲存店家的原附件不受影響。
@@ -1137,6 +1138,7 @@ body{touch-action:auto!important}
     if(restoringDraft||suppressDraft)return;
     const draft=currentDraft();if(!draft)return;
     const hasContent=draft.editId||Object.values(draft.fields).some(v=>String(v).trim())||
+      String(draft.fields.menuNotice||'').trim()||String(draft.fields.externalLinks||'').trim()||
       draft.menuBuilder?.some(b=>String(b.title||'').trim()||b.items?.some(i=>String(i.name||'').trim()||i.priceRows?.some(r=>String(r.label||'').trim()||String(r.price||'').trim())||i.groups?.length));
     try{
       if(hasContent)localStorage.setItem(DRAFT_KEY,JSON.stringify(draft));
@@ -1156,6 +1158,8 @@ body{touch-action:auto!important}
       const set=(id,v)=>{const el=document.querySelector('#'+id);if(el)el.value=v??''};
       set('sname',d.fields?.name);set('scat',d.fields?.category);set('sphone',d.fields?.phone);
       set('saddress',d.fields?.address);set('smethod',d.fields?.method);set('snote',d.fields?.note);
+      set('smenuNotice',d.fields?.menuNotice);set('externalMenuLinks',d.fields?.externalLinks);
+      window.restoreExternalMenuLinkRows?.(d.fields?.externalLinks||'');
       const name=document.querySelector('#sname');if(name){if(d.editId)name.dataset.id=d.editId;else delete name.dataset.id}
       if(Array.isArray(d.menuBuilder)&&d.menuBuilder.length){state.menuBuilder=clone(d.menuBuilder);window.renderMenuBuilder?.()}
       window.setStoreBuildMode?.(state.storeBuildMode);
@@ -1190,7 +1194,7 @@ body{touch-action:auto!important}
     const before=(data.stores||[]).map(s=>s.id+'|'+s.name+'|'+(s.items?.length||0)).join('~');
     const r=previousCreate.apply(this,args);
     const after=(data.stores||[]).map(s=>s.id+'|'+s.name+'|'+(s.items?.length||0)).join('~');
-    if(after!==before){suppressDraft=true;clearStoreDraft();state.menuBuilder=null;setTimeout(()=>{suppressDraft=false},0)}
+    if(after!==before||!document.querySelector('#sname')){suppressDraft=true;clearStoreDraft();state.menuBuilder=null;setTimeout(()=>{suppressDraft=false},0)}
     return r;
   };
 
@@ -1843,9 +1847,10 @@ menu=function(){
 <script id="external-menu-links">
 (()=>{
   const parseLinks=value=>String(value||'').split(/\r?\n/).map((line,index)=>{
-    const [label,...rest]=line.split(/[｜|]/),url=(rest.length?rest.join('|'):label).trim();
-    if(!/^https?:\/\//i.test(url))return null;
-    const name=(rest.length?label.trim():'菜單 '+(index+1))||('菜單 '+(index+1));
+    const match=line.trim().match(/^\s*(.*?)\s*(?:[｜|]|\/)\s*(https?:\/\/\S+)\s*$/i);
+    const label=match?.[1]||'',url=match?.[2]||'';
+    if(!url)return null;
+    const name=label.trim()||('菜單 '+(index+1));
     return {name,data:url};
   }).filter(Boolean);
   const formatLinks=store=>{
@@ -1858,7 +1863,7 @@ menu=function(){
     if(input.previousElementSibling?.tagName==='LABEL')input.previousElementSibling.style.display='none';
     document.querySelector('#filehint')?.style.setProperty('display','none','important');
     document.querySelector('#menuFileList')?.style.setProperty('display','none','important');
-    const field=document.createElement('div');field.className='builder-field';field.innerHTML='<label>外部菜單連結（選填）</label><textarea id="externalMenuLinks" rows="3" placeholder="每行一個：菜單名稱｜https://example.com/menu.jpg"></textarea><div class="hint">使用公開網址；菜單圖片不會再儲存在同步資料中。</div>';
+    const field=document.createElement('div');field.className='builder-field';field.innerHTML='<label>外部菜單連結（選填）</label><textarea id="externalMenuLinks" rows="3" placeholder="每行一個：菜單名稱/https://example.com/menu"></textarea><div class="hint">每行填入菜單名稱／網址；點餐頁可直接點選菜單名稱開啟連結。</div>';
     input.insertAdjacentElement('afterend',field);
     const id=document.querySelector('#sname')?.dataset.id;document.querySelector('#externalMenuLinks').value=formatLinks(id&&store(id));
   }
@@ -1948,10 +1953,10 @@ menu=function(){
   const clean=value=>String(value||'').trim();
   const safe=value=>String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const read=value=>String(value||'').split(/\r?\n/).map((line,index)=>{
-    const [name,...urls]=line.split(/[｜|]/),url=urls.join('|').trim();
-    return url?{name:clean(name)||`菜單 ${index+1}`,url}:{name:'',url:''};
+    const match=line.trim().match(/^\s*(.*?)\s*(?:[｜|]|\/)\s*(https?:\/\/\S+)\s*$/i);
+    return match?{name:clean(match[1])||`菜單 ${index+1}`,url:clean(match[2])}:{name:'',url:''};
   }).filter(row=>row.name||row.url);
-  const serialize=()=>rows.filter(row=>clean(row.url)).map((row,index)=>`${clean(row.name)||`菜單 ${index+1}`}｜${clean(row.url)}`).join('\n');
+  const serialize=()=>rows.filter(row=>clean(row.url)).map((row,index)=>`${clean(row.name)||`菜單 ${index+1}`}/${clean(row.url)}`).join('\n');
   const sync=()=>{const input=document.querySelector('#externalMenuLinks');if(input)input.value=serialize()};
   const render=()=>{
     const host=document.querySelector('#externalMenuLinkRows');if(!host)return;
@@ -1959,14 +1964,19 @@ menu=function(){
   };
   const build=()=>{
     const input=document.querySelector('#externalMenuLinks');
-    if(!input||document.querySelector('#externalMenuLinkRows'))return;
-    rows=read(input.value);if(!rows.length)rows=[{name:'',url:''}];
-    input.style.display='none';
-    const host=document.createElement('div');host.id='externalMenuLinkRows';input.before(host);render();sync();
+    if(!input)return;
+    document.querySelector('#externalMenuLinkRows')?.remove();
+    input.style.display='';input.rows=3;
+    input.placeholder='每行一個：菜單名稱/https://example.com/menu';
   };
   window.externalMenuLinkChange=(index,key,value)=>{if(rows[index])rows[index][key]=value;sync()};
   window.externalMenuLinkAdd=()=>{rows.push({name:'',url:''});render();sync()};
   window.externalMenuLinkRemove=index=>{rows.splice(index,1);if(!rows.length)rows.push({name:'',url:''});render();sync()};
+  window.restoreExternalMenuLinkRows=value=>{
+    const input=document.querySelector('#externalMenuLinks');if(!input)return;
+    rows=read(value);if(!rows.length)rows=[{name:'',url:''}];
+    if(document.querySelector('#externalMenuLinkRows')){render();sync()}else input.value=serialize();
+  };
   const adminWithLinkRows=admin;
   admin=function(...args){const out=adminWithLinkRows.apply(this,args);if(state.adminTab===1)setTimeout(build,20);return out};
   const editWithLinkRows=editStore;
@@ -1978,8 +1988,9 @@ menu=function(){
 <script id="external-menu-links-save-fix">
 (()=>{
   const parse=value=>String(value||'').split(/\r?\n/).map((line,index)=>{
-    const [name,...rest]=line.split(/[｜|]/),url=rest.join('|').trim();
-    return /^https?:\/\//i.test(url)?{name:name.trim()||`菜單 ${index+1}`,data:url}:null;
+    const match=line.trim().match(/^\s*(.*?)\s*(?:[｜|]|\/)\s*(https?:\/\/\S+)\s*$/i);
+    const name=match?.[1]||'',url=match?.[2]||'';
+    return url?{name:name.trim()||`菜單 ${index+1}`,data:url}:null;
   }).filter(Boolean);
   const saveWithExternalLinks=createStore;
   createStore=function(...args){
@@ -2001,6 +2012,104 @@ menu=function(){
     target.importData=links[0]?.data||'';
     save();
     return result;
+  };
+})();
+</script>
+<script id="single-external-menu-link">
+/* A single, explicit menu name + URL pair is intentionally used here.  It
+   avoids hidden multi-row controls losing their value before the store saves. */
+(()=>{
+  const normalUrl=value=>{
+    const url=String(value||'').trim();
+    if(!url)return '';
+    return /^https?:\/\//i.test(url)?url:`https://${url}`;
+  };
+  const read=value=>{
+    const match=String(value||'').trim().match(/^\s*(.*?)\s*(?:[｜|]|\/)\s*(https?:\/\/\S+)\s*$/i);
+    return {name:match?.[1]?.trim()||'',url:match?.[2]?.trim()||''};
+  };
+  const sync=()=>{
+    const name=document.querySelector('#singleMenuName')?.value.trim()||'';
+    const url=normalUrl(document.querySelector('#singleMenuUrl')?.value);
+    const hidden=document.querySelector('#externalMenuLinks');
+    if(hidden){hidden.value=url?`${name||'菜單'}/${url}`:'';hidden.dispatchEvent(new Event('input',{bubbles:true}));}
+  };
+  window.syncSingleMenuLink=sync;
+  const build=()=>{
+    const hidden=document.querySelector('#externalMenuLinks');
+    if(!hidden)return;
+    const parent=hidden.closest('.builder-field')||hidden.parentElement;
+    if(!parent)return;
+    const stored=read(hidden.value);
+    hidden.style.display='none';
+    const label=parent.querySelector('label');
+    if(label)label.textContent='外部菜單連結（選填）';
+    let editor=parent.querySelector('#singleExternalMenuLinkEditor');
+    if(!editor){
+      editor=document.createElement('div');editor.id='singleExternalMenuLinkEditor';
+      editor.innerHTML='<div class="external-menu-link-row"><label>菜單名稱<input id="singleMenuName" placeholder="例如：午餐菜單" oninput="syncSingleMenuLink()"></label><label class="external-link-url">網址<input id="singleMenuUrl" type="url" inputmode="url" placeholder="貼上公開網址" oninput="syncSingleMenuLink()"></label></div><div class="hint">只可填一筆。點餐頁點選菜單名稱，即可開啟網址。</div>';
+      hidden.insertAdjacentElement('afterend',editor);
+    }
+    const name=document.querySelector('#singleMenuName'),url=document.querySelector('#singleMenuUrl');
+    if(name&&!name.value)name.value=stored.name;
+    if(url&&!url.value)url.value=stored.url;
+  };
+  const priorAdmin=admin;
+  admin=function(...args){const out=priorAdmin.apply(this,args);if(state.adminTab===1)setTimeout(build,80);return out};
+  const priorEdit=editStore;
+  editStore=function(id){const out=priorEdit.call(this,id);setTimeout(()=>{build();const file=(store(id)?.menuFiles||[])[0]||{};const name=document.querySelector('#singleMenuName'),url=document.querySelector('#singleMenuUrl');if(name)name.value=file.name||'';if(url)url.value=file.data||'';sync()},100);return out};
+  const priorCreate=createStore;
+  createStore=function(...args){
+    const name=document.querySelector('#singleMenuName')?.value.trim()||'';
+    const url=normalUrl(document.querySelector('#singleMenuUrl')?.value);
+    const id=document.querySelector('#sname')?.dataset.id,before=data.stores.length;
+    sync();
+    const out=priorCreate.apply(this,args);
+    /* A successful edit returns to a fresh editor (without the old id); a new
+       store increases the store count.  Do not use the existence of #sname:
+       the fresh editor intentionally contains that field too. */
+    const freshNameField=document.querySelector('#sname');
+    const completed=id?!freshNameField?.dataset.id:data.stores.length>before;
+    if(!completed)return out;
+    const target=id?store(id):(data.stores.length>before?data.stores[data.stores.length-1]:null);
+    if(!target)return out;
+    const links=url?[{name:name||'菜單',data:url}]:[];
+    target.menuFiles=links;target.importName=links[0]?.name||'';target.importData=links[0]?.data||'';
+    save();
+    return out;
+  };
+})();
+</script>
+<script id="external-menu-preview-link">
+/* External menu URLs are links, not image files.  The management preview
+   therefore opens the public menu instead of trying to render a broken image. */
+(()=>{
+  const previousPreview=showMenuFile;
+  showMenuFile=function(id,index=0){
+    const entry=(store(id)?.menuFiles||[])[index]||{};
+    if(/^https?:\/\//i.test(String(entry.data||''))){window.open(entry.data,'_blank','noopener');return;}
+    return previousPreview.call(this,id,index);
+  };
+})();
+</script>
+<script id="external-menu-link-in-order-page">
+/* Add the saved public menu link after every version of the order-page renderer.
+   This is deliberately an enhancement wrapper so existing ordering behaviour is
+   unchanged. */
+(()=>{
+  const menuBeforeExternalLink=menu;
+  menu=function(...args){
+    const out=menuBeforeExternalLink.apply(this,args);
+    const currentGroup=group(state.group),currentStore=currentGroup&&store(currentGroup.storeId);
+    const entries=currentStore?(currentStore.menuFiles?.length?currentStore.menuFiles:(currentStore.importData?[{name:currentStore.importName||'菜單',data:currentStore.importData}]:[])):[];
+    const links=entries.filter(entry=>/^https?:\/\//i.test(String(entry.data||'')));
+    const title=document.querySelector('#view .store-head h2');
+    if(title&&links.length&&!document.querySelector('#orderPageMenuLinks')){
+      const holder=document.createElement('div');holder.id='orderPageMenuLinks';holder.className='small';holder.style.marginTop='6px';
+      holder.innerHTML=links.map(entry=>`<a href="${esc(entry.data)}" target="_blank" rel="noopener" class="badge" style="display:inline-block;margin:0 5px 4px 0;text-decoration:none">${esc(entry.name||'菜單')}</a>`).join('');
+      title.insertAdjacentElement('afterend',holder);
+    }
+    return out;
   };
 })();
 </script>
