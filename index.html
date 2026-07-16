@@ -221,7 +221,7 @@ const KEY='together-order-v1';
 const APP_VERSION='v12.1.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
 const SUPABASE_URL='https://duwinxwcovmplqqkizrk.supabase.co';
 const SUPABASE_KEY='sb_publishable_fRwQthTt4FyTSK3AbVu3nQ_Ou_NWItt';
-const EMPTY={password:'20260713',stores:[],groups:[],orders:[]};
+const EMPTY={password:'7777',stores:[],groups:[],orders:[]};
 let data=normalize(JSON.parse(localStorage.getItem(KEY)||'null')||structuredClone(EMPTY));
 let state={page:'home',group:null,cart:{},buyer:'',focusItem:null,selectedItem:null,menuSection:null,adminTab:0,orderTab:0,orderDate:localDate(new Date())},syncTimer=null;
 const $=s=>document.querySelector(s);
@@ -237,7 +237,7 @@ function dedupeOrders(orders){
     seen.add(key);return true;
   });
 }
-function normalize(raw){raw=raw&&typeof raw==='object'?raw:{};return {password:raw.password||EMPTY.password,stores:Array.isArray(raw.stores)?raw.stores:[],groups:Array.isArray(raw.groups)?raw.groups.map(g=>({...g,creator:g.creator||'',payee:g.payee||''})):[],orders:dedupeOrders(raw.orders)}}
+function normalize(raw){raw=raw&&typeof raw==='object'?raw:{};return {password:EMPTY.password,stores:Array.isArray(raw.stores)?raw.stores:[],groups:Array.isArray(raw.groups)?raw.groups.map(g=>({...g,creator:g.creator||'',payee:g.payee||''})):[],orders:dedupeOrders(raw.orders)}}
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(d,withTime=true){if(!d)return '—';return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit',...(withTime?{hour:'2-digit',minute:'2-digit',hour12:false}:{})}).format(new Date(d))}
 function localDate(d){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(d))}
@@ -269,7 +269,7 @@ function historyLines(o){return o.items.map(x=>{const price=Number(x.price||0),q
 function historyGroup(g){const s=store(g.storeId)||{},orders=data.orders.filter(o=>o.groupId===g.id).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));return `<article class="card"><div class="group-title"><div><h3>${esc(s.name||'已刪除店家')}</h3><div class="group-meta">開團者：${esc(g.creator||'未填寫')}・${isOpen(g)?'收單 '+fmt(g.deadline):'已於 '+fmt(g.deadline)+' 結束'}</div></div><span class="pill ${isOpen(g)?'paid':'unpaid'}">${isOpen(g)?'本次團購':'過往團購'}</span></div>${orders.map(o=>`<div class="order"><b>${esc(o.buyer)}</b>${historyLines(o)}<div class="small">訂購時間：${fmt(o.createdAt)}</div></div>`).join('')||'<div class="empty">這次團購還沒有訂單</div>'}</article>`}
 function history(){const active=data.groups.filter(isOpen).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));const ended=data.groups.filter(g=>!isOpen(g)).sort((a,b)=>new Date(b.deadline)-new Date(a.deadline)).slice(0,2);const shown=[...active,...ended];const shownOrders=data.orders.filter(o=>shown.some(g=>g.id===o.groupId));$('#headline').textContent='本次與最近兩次團購';$('#view').innerHTML=wantedHtml(shownOrders,shown)+(shown.length?shown.map(historyGroup).join(''):`<div class="empty"><b>還沒有歷史訂單</b>完成點餐後，訂單會顯示在這裡。</div>`)}
 function openAdmin(){$('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>管理登入</h2><label>管理密碼</label><input id="adminPassword" type="password" autocomplete="current-password" placeholder="請輸入管理密碼" onkeydown="if(event.key==='Enter')doAdminLogin()"><div class="row" style="margin-top:16px"><button class="btn light" onclick="closeModal()">取消</button><button class="btn" onclick="doAdminLogin()">登入</button></div></div></div>`;setTimeout(()=>$('#adminPassword')?.focus(),0)}
-function doAdminLogin(){if($('#adminPassword').value!==data.password)return alert('密碼錯誤');closeModal();state.page='admin';render()}
+function doAdminLogin(){if($('#adminPassword').value!=='7777')return alert('密碼錯誤');closeModal();state.page='admin';render()}
 function logout(){state.page='home';render()}
 function admin(){$('#headline').textContent='團購後台管理';$('#adminBar').classList.remove('hidden');$('#tabs').classList.remove('hidden');const names=['開團管理','店家與菜單','訂單管理','設定'];$('#tabs').innerHTML=names.map((x,i)=>`<button class="tab ${i===state.adminTab?'on':''}" onclick="state.adminTab=${i};admin()">${x}</button>`).join('');$('#view').innerHTML=[adminGroups,adminStores,adminOrders,adminSettings][state.adminTab]();if(state.adminTab===1)setupMenuFormatHint()}
 function setupMenuFormatHint(){const area=$('#sitems');if(!area||$('#menuFormatHint'))return;const label=[...$('#view').querySelectorAll('label')].find(x=>x.textContent.includes('餐點內容'));if(label)label.textContent='餐點內容（區塊格式）';area.insertAdjacentHTML('afterend',`<div id="menuFormatHint" class="summary"><b>區塊式菜單格式</b><br><code>【飽胃主食】</code><br><code>品項：傳統滷肉飯</code><br><code>規格：</code><br><code>- [分量與價格]：小碗=35, 大碗=50, 巨無霸=70</code><br><code>- [加料]：不加=+0, 加滷蛋=+15</code><br><span class="small">名稱含「價格」的規格群組會決定基礎價；其他「=+金額」選項會加在總價上。規格群組可自行新增或省略。</span></div>`)}
@@ -834,7 +834,7 @@ body{touch-action:auto!important}
   const uid=()=>crypto.randomUUID?.()||('id'+Date.now()+Math.random().toString(16).slice(2));
   const cleanText=v=>String(v??'').trim();
   const blankPriceRow=()=>({id:uid(),label:'',price:''});
-  const blankExtraGroup=()=>({id:uid(),name:'',noPrice:false,collapsed:false,rows:[{id:uid(),label:'',price:'0'}]});
+  const blankExtraGroup=()=>({id:uid(),name:'',noPrice:false,required:false,collapsed:false,rows:[{id:uid(),label:'',price:'0'}]});
   const blankItem=()=>({id:uid(),name:'',notice:'',priceRows:[blankPriceRow()],groups:[]});
   const blankBlock=(title='')=>({id:uid(),title,items:[blankItem()]});
 
@@ -877,7 +877,7 @@ body{touch-action:auto!important}
       <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddPriceRow('${bid}','${it.id}')">＋ 分量與價格</button>
       <div style="margin-top:14px"><div class="between" style="align-items:center;gap:8px;flex-wrap:wrap"><b>其他規格（選填）</b><div class="builder-actions" style="margin-top:0"><button type="button" class="btn light smallbtn" onclick="builderSetAllGroupsCollapse('${bid}','${it.id}',true)">一鍵摺疊</button><button type="button" class="btn light smallbtn" onclick="builderSetAllGroupsCollapse('${bid}','${it.id}',false)">一鍵展開</button></div></div><div class="builder-muted">例如加料、辣度、甜度；系統會自動加入「=+」。</div></div>
       <div>${it.groups.map(g=>extraGroupEditor(bid,it.id,g)).join('')}</div>
-      <div class="builder-actions" style="margin-top:8px;justify-content:flex-start;width:100%"><button type="button" class="btn light smallbtn builder-add" onclick="builderAddGroup('${bid}','${it.id}')">＋ 其他規格欄位</button><button type="button" class="btn light smallbtn builder-add" onclick="builderCopyPreviousItemSpecs('${bid}','${it.id}')">＋ 同前品項規格</button></div>
+      <div class="builder-actions" style="margin-top:8px;justify-content:flex-start;width:100%"><button type="button" class="btn light smallbtn builder-add" onclick="builderAddGroup('${bid}','${it.id}')">＋ 其他規格欄位</button><button type="button" class="btn light smallbtn builder-add" onclick="builderCopyPreviousItemSpecs('${bid}','${it.id}')">＋ 同前品項規格</button><button type="button" class="btn light smallbtn builder-add" onclick="builderInsertItemAfter('${bid}','${it.id}')">＋ 品項</button></div>
     </article>`;
   }
   function priceRowEditor(bid,iid,r){return `<div class="builder-row">
@@ -896,6 +896,7 @@ body{touch-action:auto!important}
         <button type="button" class="btn danger builder-remove" aria-label="刪除此規格" onclick="builderRemoveGroup('${bid}','${iid}','${g.id}')">×</button>
       </div>
       ${collapsed?'':`<div class="extra-group-body">
+        <div class="builder-check" role="radiogroup" aria-label="${escAttr(g.name||'其他規格')}選擇方式"><label><input type="radio" name="required-${g.id}" ${g.required?'checked':''} onchange="builderSetGroupRequired('${bid}','${iid}','${g.id}',true)"> 必選</label><label><input type="radio" name="required-${g.id}" ${!g.required?'checked':''} onchange="builderSetGroupRequired('${bid}','${iid}','${g.id}',false)"> 選填</label></div>
         <label class="builder-check"><input type="checkbox" ${g.noPrice?'checked':''} onchange="builderToggleGroupNoPrice('${bid}','${iid}','${g.id}',this.checked)"> 此規格不需價格（例如：正常、去香菜、飯硬）</label>
         ${g.rows.map(r=>`<div class="builder-row ${g.noPrice?'no-price':''}"><div class="builder-field builder-label"><label>選項名稱</label><input placeholder="例如：${g.noPrice?'正常':'加滷蛋'}" value="${escAttr(r.label)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','label',this.value)"></div>${g.noPrice?'':`<div class="builder-eq">=+</div><div class="builder-field builder-price"><label>加價</label><input type="number" min="0" step="1" inputmode="decimal" placeholder="15" value="${escAttr(r.price)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','price',this.value)"></div>`}<button type="button" class="btn danger builder-remove" onclick="builderRemoveGroupRow('${bid}','${iid}','${g.id}','${r.id}')">×</button></div>`).join('')}
         <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddGroupRow('${bid}','${iid}','${g.id}')">＋ 選項</button>
@@ -911,6 +912,7 @@ body{touch-action:auto!important}
   window.builderSetItem=(bid,iid,k,v)=>{const i=findItem(bid,iid);if(i)i[k]=v};
   window.builderSetPrice=(bid,iid,rid,k,v)=>{const r=findItem(bid,iid)?.priceRows.find(x=>x.id===rid);if(r)r[k]=v};
   window.builderSetGroup=(bid,iid,gid,k,v)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(g)g[k]=v};
+  window.builderSetGroupRequired=(bid,iid,gid,required)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(g){g.required=!!required;renderMenuBuilder()}};
   window.builderToggleGroupCollapse=(bid,iid,gid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;g.collapsed=!g.collapsed;renderMenuBuilder()};
   window.builderSetAllGroupsCollapse=(bid,iid,collapsed)=>{const i=findItem(bid,iid);if(!i)return;i.groups.forEach(g=>g.collapsed=!!collapsed);renderMenuBuilder()};
   window.builderMoveGroup=(bid,iid,fromGid,toGid)=>{const i=findItem(bid,iid);if(!i||fromGid===toGid)return;const from=i.groups.findIndex(g=>g.id===fromGid),to=i.groups.findIndex(g=>g.id===toGid);if(from<0||to<0)return;const [moved]=i.groups.splice(from,1);i.groups.splice(to,0,moved);renderMenuBuilder()};
@@ -922,9 +924,10 @@ body{touch-action:auto!important}
   window.builderRemoveGroup=(bid,iid,gid)=>{const i=findItem(bid,iid);if(i)i.groups=i.groups.filter(x=>x.id!==gid);renderMenuBuilder()};
   window.builderAddGroupRow=(bid,iid,gid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(g)g.rows.push({id:uid(),label:'',price:g.noPrice?'':'0'});renderMenuBuilder()};
   window.builderRemoveGroupRow=(bid,iid,gid,rid)=>{const g=findItem(bid,iid)?.groups.find(x=>x.id===gid);if(!g)return;if(g.rows.length<=1)return alert('每個其他規格至少保留一個選項');g.rows=g.rows.filter(x=>x.id!==rid);renderMenuBuilder()};
-  const copyItemSpecs=(from,to)=>{if(!from||!to)return;to.priceRows=(from.priceRows||[]).map(r=>({id:uid(),label:r.label,price:r.price}));to.groups=(from.groups||[]).map(g=>({id:uid(),name:g.name,noPrice:!!g.noPrice,collapsed:!!g.collapsed,rows:(g.rows||[]).map(r=>({id:uid(),label:r.label,price:r.price}))}))};
+  const copyItemSpecs=(from,to)=>{if(!from||!to)return;to.priceRows=(from.priceRows||[]).map(r=>({id:uid(),label:r.label,price:r.price}));to.groups=(from.groups||[]).map(g=>({id:uid(),name:g.name,noPrice:!!g.noPrice,required:!!g.required,collapsed:!!g.collapsed,rows:(g.rows||[]).map(r=>({id:uid(),label:r.label,price:r.price}))}))};
   window.builderCopyPreviousItemSpecs=(bid,iid)=>{const b=findBlock(bid),at=b?.items.findIndex(i=>i.id===iid);if(!b||at===undefined||at<1)return alert('此區塊尚無上一個品項可沿用規格');copyItemSpecs(b.items[at-1],b.items[at]);renderMenuBuilder()};
   window.builderAddItem=(bid,copyPrevious=false)=>{const b=findBlock(bid);if(!b)return;const pending=state.builderPending;if(copyPrevious&&pending?.targetBid&&pending?.targetItemId){const target=findItem(pending.targetBid,pending.targetItemId);if(target&&pending.source)copyItemSpecs(pending.source,target);state.builderPending=null;renderMenuBuilder();return}const next=blankItem(),prev=b.items[b.items.length-1];if(copyPrevious&&prev)copyItemSpecs(prev,next);b.items.push(next);state.builderPending=copyPrevious?null:{targetBid:bid,targetItemId:next.id,source:prev?{priceRows:(prev.priceRows||[]).map(r=>({...r})),groups:(prev.groups||[]).map(g=>({...g,rows:(g.rows||[]).map(r=>({...r}))}))}:null};renderMenuBuilder()};
+  window.builderInsertItemAfter=(bid,iid)=>{const b=findBlock(bid),index=b?.items.findIndex(item=>item.id===iid);if(!b||index<0)return;b.items.splice(index+1,0,blankItem());renderMenuBuilder()};
   window.builderRemoveItem=(bid,iid)=>{const b=findBlock(bid);if(!b)return;if(b.items.length<=1)return alert('每個區塊至少保留一個品項');b.items=b.items.filter(x=>x.id!==iid);renderMenuBuilder()};
   window.builderAddBlockAfter=(bid)=>{const blocks=ensureBuilder(),idx=blocks.findIndex(x=>x.id===bid),prev=blocks[idx]?.items?.[blocks[idx]?.items?.length-1],next=blankBlock('');blocks.splice(idx+1,0,next);state.builderPending={targetBid:next.id,targetItemId:next.items[0].id,source:prev?{priceRows:(prev.priceRows||[]).map(r=>({...r})),groups:(prev.groups||[]).map(g=>({...g,rows:(g.rows||[]).map(r=>({...r}))}))}:null};renderMenuBuilder()};
   window.builderRemoveBlock=bid=>{state.menuBuilder=ensureBuilder().filter(x=>x.id!==bid);renderMenuBuilder()};
@@ -1011,7 +1014,7 @@ body{touch-action:auto!important}
       const it=blankItem();it.name=item.name||'';it.notice=item.notice||'';
       if(priceGroup){it.priceRows=priceGroup.values.map(v=>({id:uid(),label:v,price:String(priceGroup.adjustments?.[v]??0)}))}
       else {it.priceRows=[{id:uid(),label:item.specs||'單一規格',price:String(item.price??0)}]}
-      it.groups=(item.optionGroups||[]).filter(g=>g!==priceGroup).map(g=>{const vals=g.values||[],hasAnyPrice=vals.some(v=>Object.prototype.hasOwnProperty.call(g.adjustments||{},v));return {id:uid(),name:g.name||'',noPrice:!hasAnyPrice,collapsed:false,rows:vals.map(v=>({id:uid(),label:v,price:hasAnyPrice?String(g.adjustments?.[v]??0):''}))}});
+      it.groups=(item.optionGroups||[]).filter(g=>g!==priceGroup).map(g=>{const vals=g.values||[],hasAnyPrice=vals.some(v=>Object.prototype.hasOwnProperty.call(g.adjustments||{},v));return {id:uid(),name:g.name||'',noPrice:!hasAnyPrice,required:g.required!==false,collapsed:false,rows:vals.map(v=>({id:uid(),label:v,price:hasAnyPrice?String(g.adjustments?.[v]??0):''}))}});
       block.items.push(it);
     }
     return blocks.length?blocks:[blankBlock('')];
@@ -1033,14 +1036,14 @@ body{touch-action:auto!important}
   window.createStore=function(){
     if((state.storeBuildMode||'full')!=='full')return oldCreateStore();
     let raw;try{raw=builderToText()}catch(e){return alert(e.message)}
-    const itemNotices=ensureBuilder().flatMap(b=>b.items.map(i=>i.notice||''));
+    const builderItems=ensureBuilder().flatMap(b=>b.items),itemNotices=builderItems.map(i=>i.notice||'');
     const menuNotice=document.querySelector('#smenuNotice')?.value.trim()||'';
     const targetId=document.querySelector('#sname')?.dataset.id;
     if(!cleanText(document.querySelector('#sname')?.value))return alert('請輸入店家名稱');
     let hidden=document.querySelector('#sitems');if(!hidden){hidden=document.createElement('textarea');hidden.id='sitems';hidden.className='hidden';document.querySelector('#fullMenuFields')?.appendChild(hidden)}hidden.value=raw;
     const result=oldCreateStore();
     const target=targetId?store(targetId):data.stores[data.stores.length-1];
-    if(target?.items){target.items.forEach((item,index)=>item.notice=itemNotices[index]||'');target.menuNotice=menuNotice;save()}
+    if(target?.items){target.items.forEach((item,index)=>{item.notice=itemNotices[index]||'';const sourceGroups=builderItems[index]?.groups||[];(item.optionGroups||[]).forEach(group=>{const source=sourceGroups.find(candidate=>cleanText(candidate.name)===cleanText(group.name));if(source)group.required=!!source.required})});target.menuNotice=menuNotice;save()}
     state.menuBuilder=[blankBlock('')];
     return result;
   };
@@ -1059,9 +1062,50 @@ body{touch-action:auto!important}
     if(state.adminTab===1&&!state.menuBuilder)state.menuBuilder=[blankBlock('')];
     const out=oldAdmin();if(state.adminTab===1)setTimeout(renderMenuBuilder,0);return out;
   };
+  window.previewPortionPrices=function(id){
+    const s=store(id);if(!s)return;
+    const rows=(s.items||[]).map(item=>{
+      const pricing=(item.optionGroups||[]).find(group=>group.pricing)||((item.optionGroups||[]).find(group=>/價格/.test(group.name)));
+      const values=pricing?pricing.values.map(value=>`${esc(value)} NT$ ${Number(pricing.adjustments?.[value]||0).toLocaleString()}`).join('／'):variants(item).map(value=>`${esc(value.spec)} NT$ ${Number(value.price||0).toLocaleString()}`).join('／');
+      return `<div class="menu-item"><div class="grow"><b>${esc(item.name)}</b><div class="small" style="margin-top:4px">分量與價格：${values||'尚未設定'}</div></div></div>`;
+    }).join('')||'<p class="small">尚無品項</p>';
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox"><button class="btn light smallbtn" style="float:right" onclick="closeModal()">關閉</button><h2>${esc(s.name)}｜分量與價格</h2>${rows}</div></div>`;
+  };
+  const adminWithPortionPreview=window.admin;
+  window.admin=function(){
+    const out=adminWithPortionPreview();
+    if(state.adminTab===1)$('#view').querySelectorAll('button[onclick^="previewStore("]').forEach(button=>{
+      const id=button.getAttribute('onclick')?.match(/previewStore\('([^']+)'\)/)?.[1];
+      if(!id||button.parentElement.querySelector('[data-portion-preview]'))return;
+      const preview=document.createElement('button');preview.className='btn light smallbtn';preview.dataset.portionPreview='1';preview.textContent='預覽分量與價格';preview.onclick=()=>previewPortionPrices(id);button.parentElement.insertBefore(preview,button.nextSibling);
+    });
+    return out;
+  };
 })();
 </script>
 
+
+<script id="collapsed-group-required-label">
+(()=>{
+  const baseRenderMenuBuilder=window.renderMenuBuilder;
+  if(!baseRenderMenuBuilder)return;
+  window.renderMenuBuilder=function(){
+    const result=baseRenderMenuBuilder();
+    document.querySelectorAll('.extra-group-card.is-collapsed').forEach(card=>{
+      const block=(state.menuBuilder||[]).find(item=>item.id===card.dataset.bid);
+      const item=block?.items?.find(entry=>entry.id===card.dataset.iid);
+      const group=item?.groups?.find(entry=>entry.id===card.dataset.gid);
+      const name=card.querySelector('.collapsed-group-name');
+      if(!group||!name||name.querySelector('[data-required-label]'))return;
+      const label=document.createElement('small');
+      label.dataset.requiredLabel='1';label.textContent=group.required?'必選':'選填';
+      label.style.cssText='font-size:12px;font-weight:700;color:var(--p);margin-left:7px';
+      name.querySelector('b')?.appendChild(label);
+    });
+    return result;
+  };
+})();
+</script>
 
 <script id="v12-2-store-draft-autosave">
 (()=>{
@@ -1683,6 +1727,46 @@ menu=function(){
   adminGroupCard=function(g){
     const s=store(g.storeId)||{},rawOrders=data.orders.filter(order=>order.groupId===g.id),orders=mergeOrdersByBuyer(rawOrders),open=isOpen(g),pending=rawOrders.some(order=>!order.paid);
     return `<article class="card store-section"><div class="between"><div><h3>${esc(s.name||'已刪除店家')}${s.phone?` <a href="tel:${esc(s.phone)}" class="badge" style="vertical-align:middle;text-decoration:none">☎ ${esc(s.phone)}</a>`:''}</h3><div class="small">開團者：${esc(g.creator||'未填寫')}・${fmt(g.createdAt)}</div></div><div style="text-align:right"><button class="btn light smallbtn" onclick="openManualOrder('${g.id}')">＋ 新增訂單</button>${pending?`<button class="btn smallbtn" style="margin-left:6px" onclick="markGroupPaid('${g.id}')">一鍵標記已付款</button>`:''}<div style="margin-top:7px"><span class="pill ${open?'paid':'unpaid'}">${open?'開放中':'已結束'}</span></div></div></div><div class="summary"><b>品項數量加總</b>${adminSummaryLines(rawOrders)}<br><b>訂單總金額：NT$ ${rawOrders.reduce((sum,order)=>sum+Number(order.total||0),0).toLocaleString()}</b></div>${orders.map(order=>`<div class="order order-grid"><b>${esc(order.buyer)}</b><div class="details" style="grid-column:1 / 3;grid-row:2">${mergedAdminLines(order)}${order.sourceOrders.length>1?`<div class="small">已合併 ${order.sourceOrders.length} 筆訂單</div>`:''}</div><div class="adminlist" style="grid-column:3;grid-row:2;align-self:start"><button class="pill ${order.paid?'paid':'unpaid'}" onclick="markMergedBuyerPaid('${g.id}','${encodeURIComponent(order.buyer)}')">${order.paid?'已付款':'未付款'}</button><button class="btn light smallbtn" onclick="removeMergedBuyerOrders('${g.id}','${encodeURIComponent(order.buyer)}')">移除</button></div></div>`).join('')||'<p class="small">尚無訂單</p>'}</article>`;
+  };
+  /* Optional extra groups can be skipped; required groups keep their first choice. */
+  cartEntry=function(item,i){
+    const current=state.cart[i]||{};
+    const defaults=Object.fromEntries(optionGroups(item).map(group=>[group.name,group.required===false?'':group.values[0]]));
+    return {...current,q:current.q||0,variant:current.variant||0,options:{...defaults,...(current.options||{})}};
+  };
+  const cartForExistingOrderWithOptionalGroups=cartForExistingOrder;
+  cartForExistingOrder=function(order,menu){
+    const cart=cartForExistingOrderWithOptionalGroups(order,menu);
+    menu.items.forEach((item,index)=>{
+      const selected=order.items.find(entry=>entry.name===item.name),spec=String(selected?.spec||'');
+      optionGroups(item).filter(group=>group.required===false).forEach(group=>{if(cart[index]&&!spec.includes(group.name+':'))cart[index].options[group.name]=''});
+    });
+    return cart;
+  };
+  const compactSpec=(item,cart)=>optionGroups(item).filter(group=>cart.options[group.name]).map(group=>`${group.name}:${cart.options[group.name]}`).join('、');
+  menuItemsFromCart=function(menu){
+    return menu.items.flatMap((item,index)=>{
+      const cart=cartEntry(item,index);if(!cart.q)return[];
+      const groups=optionGroups(item),variant=variants(item)[cart.variant];
+      return [{name:item.name,spec:groups.length?compactSpec(item,cart):variant.spec,qty:cart.q,price:groups.length?selectedPrice(item,cart):variant.price}];
+    });
+  };
+  buildMenuOrder=function(){
+    const g=group(state.group),s=g&&store(g.storeId);if(!g||!s||!isOpen(g))throw new Error('這個團購已經結束');
+    const buyer=$('#buyer')?.value.trim()||state.buyer?.trim();if(!buyer)throw new Error('請輸入訂購人');
+    const items=menuItemsFromCart(s);if(!items.length)throw new Error('請至少選擇一份餐點');
+    return {id:crypto.randomUUID(),groupId:g.id,buyer,items,total:items.reduce((sum,item)=>sum+item.qty*item.price,0),paid:false,createdAt:new Date().toISOString()};
+  };
+  const orderFormWithOptionalGroups=orderForm;
+  orderForm=function(){
+    orderFormWithOptionalGroups();
+    const g=group(state.group),s=g&&store(g.storeId);if(!g||!s)return;
+    s.items.forEach(item=>optionGroups(item).filter(group=>group.required===false).forEach(group=>{
+      const select=[...document.querySelectorAll('#view select')].find(node=>node.getAttribute('aria-label')===item.name+group.name);
+      if(!select)return;
+      if(!select.querySelector('option[value=""]')){const option=document.createElement('option');option.value='';option.textContent='不選擇';select.insertBefore(option,select.firstChild)}
+      if(select.previousElementSibling?.tagName==='LABEL')select.previousElementSibling.textContent=group.name+'（選填）';
+    }));
   };
   async function loadSdk(){
     if(window.supabase?.createClient)return window.supabase;
