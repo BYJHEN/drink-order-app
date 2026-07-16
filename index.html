@@ -106,7 +106,7 @@ button:disabled{opacity:.58;cursor:wait}
 .sync-status{position:fixed;left:max(12px,env(safe-area-inset-left));right:auto;top:auto;bottom:calc(82px + env(safe-area-inset-bottom));z-index:30;padding:6px 9px;border-radius:99px;background:#ffffffea;color:#514c42;font-size:11px;font-weight:800;box-shadow:0 3px 12px #0002;transition:.2s ease;pointer-events:auto;max-width:calc(100vw - 24px);white-space:nowrap}
 .sync-status.ok{color:var(--ok)}.sync-status.warn{color:var(--warn)}.sync-status.error{color:var(--danger)}
 .toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translate(-50%,12px);z-index:50;width:min(420px,calc(100% - 28px));background:#34332f;color:#fff;padding:12px 14px;border-radius:12px;text-align:center;font-weight:800;opacity:0;transition:.2s ease;pointer-events:none;box-shadow:0 8px 28px #0004}.toast.show{opacity:1;transform:translate(-50%,0)}
-@media(max-width:560px){.top{padding-left:16px;padding-right:92px}.wanted{top:calc(89px + env(safe-area-inset-top))}.page{contain:layout style}}
+@media(max-width:560px){.top{padding-left:16px;padding-right:92px}.wanted{top:calc(89px + env(safe-area-inset-top))}.page{contain:style}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}}
 </style>
 
@@ -1705,6 +1705,59 @@ menu=function(){
   setTimeout(activate,500);
   setInterval(()=>{if(enabled&&!realtimeReady&&document.visibilityState==='visible')loadSharedState(true)},8000);
 })();
+</script>
+<style>
+  .wanted.wanted-fixed{position:fixed!important;z-index:8!important;margin-bottom:0!important}
+</style>
+<script>
+  /* Keep the history ticker visible even in browsers where sticky positioning is unreliable. */
+  (()=>{
+    let clearTickerPin=()=>{};
+    function pinHistoryTicker(){
+      clearTickerPin();
+      const ticker=document.querySelector('.wanted');
+      if(!ticker)return;
+      const placeholder=document.createElement('div');
+      placeholder.setAttribute('aria-hidden','true');
+      placeholder.style.display='none';
+      ticker.before(placeholder);
+      let pinned=false,frame=0;
+      const release=()=>{
+        if(!pinned)return;
+        ticker.classList.remove('wanted-fixed');
+        ticker.style.top='';ticker.style.left='';ticker.style.width='';
+        placeholder.style.display='none';
+        pinned=false;
+      };
+      const update=()=>{
+        frame=0;
+        const header=document.querySelector('.top');
+        const top=Math.max((header?.getBoundingClientRect().bottom||0)+8,8);
+        if(!pinned){
+          const rect=ticker.getBoundingClientRect();
+          if(rect.top<=top+1){
+            const margin=parseFloat(getComputedStyle(ticker).marginBottom)||0;
+            placeholder.style.height=(rect.height+margin)+'px';
+            placeholder.style.display='block';
+            ticker.classList.add('wanted-fixed');
+            ticker.style.top=top+'px';ticker.style.left=rect.left+'px';ticker.style.width=rect.width+'px';
+            pinned=true;
+          }
+        }else{
+          const rect=placeholder.getBoundingClientRect();
+          if(rect.top>top+1){release();return}
+          ticker.style.top=top+'px';ticker.style.left=rect.left+'px';ticker.style.width=rect.width+'px';
+        }
+      };
+      const requestUpdate=()=>{if(!frame)frame=requestAnimationFrame(update)};
+      window.addEventListener('scroll',requestUpdate,{passive:true});
+      window.addEventListener('resize',requestUpdate);
+      clearTickerPin=()=>{cancelAnimationFrame(frame);window.removeEventListener('scroll',requestUpdate);window.removeEventListener('resize',requestUpdate);release();placeholder.remove()};
+      update();
+    }
+    const originalHistory=history;
+    history=function(){originalHistory();requestAnimationFrame(pinHistoryTicker)};
+  })();
 </script>
 </body>
 </html>
