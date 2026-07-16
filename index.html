@@ -219,8 +219,8 @@ img,video,canvas,svg,object,embed,iframe{max-width:100%;height:auto}
 <script>
 const KEY='together-order-v1';
 const APP_VERSION='v12.1.0', COPYRIGHT='Copyright © 2026 JJ. All rights reserved.';
-const SUPABASE_URL='https://duwinxwcovmplqqkizrk.supabase.co';
-const SUPABASE_KEY='sb_publishable_fRwQthTt4FyTSK3AbVu3nQ_Ou_NWItt';
+const SUPABASE_URL='https://ivvfnghqrzwlfvmvpltl.supabase.co';
+const SUPABASE_KEY='sb_publishable_zgGjJPrHQmbl054O6FUsLg_mMGZqszK';
 const EMPTY={password:'7777',stores:[],groups:[],orders:[]};
 let data=normalize(JSON.parse(localStorage.getItem(KEY)||'null')||structuredClone(EMPTY));
 let state={page:'home',group:null,cart:{},buyer:'',focusItem:null,selectedItem:null,menuSection:null,adminTab:0,orderTab:0,orderDate:localDate(new Date())},syncTimer=null;
@@ -473,7 +473,7 @@ function render(){
  if(p==='home')home();else if(p==='menu')menu();else if(p==='order'){const s=store(group(state.group)?.storeId);s?.quickMenu?quickOrderForm():orderForm()}else if(p==='history')history();else admin();
 }
 
-render();loadSharedState();setInterval(()=>{if(state.page==='home'||state.page==='history')loadSharedState()},12000);
+render();loadSharedState();setInterval(()=>{if(!window.__togetherRealtimeActive&&(state.page==='home'||state.page==='history'))loadSharedState()},120000);
 
 let jjSignatureTimer=null;
 function syncAdminSignature(){
@@ -1489,12 +1489,30 @@ menu=function(){
     persistLocal();
     if(shouldRender&&canRerender())render();
   }
+  function applyOrderChange(change){
+    const type=change?.eventType,id=change?.old?.id||change?.new?.id;
+    if(type==='DELETE'){data.orders=data.orders.filter(order=>order.id!==id)}
+    else if(change?.new?.order_data){
+      const next=change.new.order_data;
+      data.orders=dedupeOrders([next,...data.orders.filter(order=>order.id!==next.id)]);
+    }else{return reloadOrders(true)}
+    persistLocal();if(canRerender())render();
+  }
+  function applyStateChange(change){
+    const payload=change?.new?.payload;
+    if(!payload)return loadSharedState(true);
+    data={...normalize(payload),orders:data.orders};syncBase=cloudState(data);persistLocal();
+    if(canRerender())render();
+  }
   const legacySave=save, legacyPush=pushShared, legacyLoad=loadSharedState;
   save=function(){
     if(!enabled)return legacySave();
     data=normalize(data);persistLocal();localStorage.setItem(PENDING_KEY,'1');
     setSyncStatus(navigator.onLine?'warn':'error',navigator.onLine?'待同步':'離線暫存');
-    clearTimeout(syncTimer);syncTimer=setTimeout(pushShared,180);return true;
+    clearTimeout(syncTimer);syncTimer=setTimeout(async()=>{
+      const synced=await pushShared();
+      if(!synced&&localStorage.getItem(PENDING_KEY)==='1')setTimeout(()=>{if(!isSyncing)pushShared()},900);
+    },0);return true;
   };
   pushShared=async function(){
     if(!enabled)return legacyPush();
@@ -1575,6 +1593,33 @@ menu=function(){
     if(!enabled)return fallbackRemove(id);
     if(!confirm('確定要移除這筆訂單嗎？此操作會同步更新歷史訂單。'))return;
     try{await request(`${ORDERS_TABLE}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});data.orders=data.orders.filter(item=>item.id!==id);persistLocal();admin()}catch(error){alert('移除失敗，請稍後再試')}
+  };
+  const fallbackDeleteGroup=deleteGroup;
+  deleteGroup=async function(id){
+    if(!enabled)return fallbackDeleteGroup(id);
+    const target=group(id),related=data.orders.filter(order=>order.groupId===id);
+    if(!target)return;
+    if(!confirm(`確定要刪除這次開團嗎？將同步刪除 ${related.length} 筆訂單與歷史訂單資料。`))return;
+    data.orders=data.orders.filter(order=>order.groupId!==id);
+    data.groups=data.groups.filter(item=>item.id!==id);
+    data=normalize(data);persistLocal();localStorage.setItem(PENDING_KEY,'1');
+    setSyncStatus('warn','同步中');
+    try{
+      await Promise.all(related.map(order=>request(`${ORDERS_TABLE}?id=eq.${encodeURIComponent(order.id)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}})));
+      let synced=false;
+      for(let attempt=0;attempt<4&&!synced;attempt++){
+        if(!isSyncing)synced=await pushShared();
+        if(!synced)await new Promise(resolve=>setTimeout(resolve,300));
+      }
+      if(!synced)throw new Error('同步尚未完成');
+      await reloadOrders(false);
+      admin();
+    }catch(error){
+      console.warn('刪除開團同步失敗',error);
+      setSyncStatus('error','同步失敗，將自動重試');
+      setTimeout(()=>pushShared(),600);
+      admin();
+    }
   };
   const fallbackManual=saveManualOrder;
   saveManualOrder=async function(groupId){
@@ -1776,18 +1821,67 @@ menu=function(){
     const sdk=await loadSdk();if(!sdk?.createClient)return;
     realtimeClient=sdk.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
     realtimeClient.channel('together-order-live')
-      .on('postgres_changes',{event:'*',schema:'public',table:ORDERS_TABLE},()=>reloadOrders(true))
-      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'together_order_state',filter:'id=eq.shared'},()=>loadSharedState(true))
+      .on('postgres_changes',{event:'*',schema:'public',table:ORDERS_TABLE},change=>applyOrderChange(change))
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'together_order_state',filter:'id=eq.shared'},change=>applyStateChange(change))
       .subscribe(status=>{realtimeReady=status==='SUBSCRIBED'});
   }
   async function activate(){
     try{
       await request(`${ORDERS_TABLE}?select=id&limit=1`,{cache:'no-store'});
-      enabled=true;await loadSharedState(true);await startRealtime();
+      enabled=true;window.__togetherRealtimeActive=true;await loadSharedState(true);await startRealtime();
     }catch(_){/* SQL setup has not been applied yet: keep the existing compatible mode. */}
   }
   setTimeout(activate,500);
-  setInterval(()=>{if(enabled&&!realtimeReady&&document.visibilityState==='visible')loadSharedState(true)},8000);
+  setInterval(()=>{
+    if(!enabled||document.visibilityState!=='visible')return;
+    if(localStorage.getItem(PENDING_KEY)==='1'){if(!isSyncing)pushShared();return}
+    if(!realtimeReady)loadSharedState(true);
+  },60000);
+  window.addEventListener('online',()=>{if(enabled&&localStorage.getItem(PENDING_KEY)==='1')pushShared()});
+})();
+</script>
+<script id="external-menu-links">
+(()=>{
+  const parseLinks=value=>String(value||'').split(/\r?\n/).map((line,index)=>{
+    const [label,...rest]=line.split(/[｜|]/),url=(rest.length?rest.join('|'):label).trim();
+    if(!/^https?:\/\//i.test(url))return null;
+    const name=(rest.length?label.trim():'菜單 '+(index+1))||('菜單 '+(index+1));
+    return {name,data:url};
+  }).filter(Boolean);
+  const formatLinks=store=>{
+    const files=store?.menuFiles?.length?store.menuFiles:(store?.importData?[{name:store.importName||'菜單',data:store.importData}]:[]);
+    return files.filter(file=>/^https?:\/\//i.test(String(file.data||''))).map(file=>`${file.name||'菜單'}｜${file.data}`).join('\n');
+  };
+  function ensureExternalMenuLinks(){
+    const input=document.querySelector('#view input[type="file"]');if(!input||document.querySelector('#externalMenuLinks'))return;
+    input.style.display='none';
+    if(input.previousElementSibling?.tagName==='LABEL')input.previousElementSibling.style.display='none';
+    document.querySelector('#filehint')?.style.setProperty('display','none','important');
+    document.querySelector('#menuFileList')?.style.setProperty('display','none','important');
+    const field=document.createElement('div');field.className='builder-field';field.innerHTML='<label>外部菜單連結（選填）</label><textarea id="externalMenuLinks" rows="3" placeholder="每行一個：菜單名稱｜https://example.com/menu.jpg"></textarea><div class="hint">使用公開網址；菜單圖片不會再儲存在同步資料中。</div>';
+    input.insertAdjacentElement('afterend',field);
+    const id=document.querySelector('#sname')?.dataset.id;document.querySelector('#externalMenuLinks').value=formatLinks(id&&store(id));
+  }
+  const adminForExternalLinks=admin;
+  admin=function(...args){const result=adminForExternalLinks.apply(this,args);if(state.adminTab===1)setTimeout(ensureExternalMenuLinks,0);return result};
+  const editStoreForExternalLinks=editStore;
+  editStore=function(id){const result=editStoreForExternalLinks(id);setTimeout(()=>{ensureExternalMenuLinks();const input=document.querySelector('#externalMenuLinks');if(input)input.value=formatLinks(store(id))},0);return result};
+  const createStoreForExternalLinks=createStore;
+  createStore=function(){
+    const rawLinks=document.querySelector('#externalMenuLinks')?.value,targetId=document.querySelector('#sname')?.dataset.id,before=data.stores.length;
+    const result=createStoreForExternalLinks();
+    if(rawLinks===undefined||document.querySelector('#sname'))return result;
+    const target=targetId?store(targetId):(data.stores.length>before?data.stores[data.stores.length-1]:null),links=parseLinks(rawLinks);
+    if(!target||!links.length)return result;
+    target.menuFiles=links;target.importName=links[0].name;target.importData=links[0].data;save();
+    return result;
+  };
+  showMenuFile=function(id,index=0){
+    const s=store(id),files=s?.menuFiles?.length?s.menuFiles:(s?.importData?[{name:s.importName||'菜單',data:s.importData}]:[]),file=files[index];if(!file)return;
+    menuPreviewState={id,index,total:files.length};
+    const source=String(file.data||''),pdf=/^data:application\/pdf|\.pdf(?:[?#].*)?$/i.test(source),content=pdf?`<object data="${source}" type="application/pdf" style="width:100%;height:65vh">無法預覽 PDF</object>`:`<img src="${source}" alt="${esc(file.name)}" style="width:100%;max-height:70vh;object-fit:contain">`,tabs=files.length>1?`<div class="tabs" style="padding:0 0 12px">${files.map((entry,i)=>`<button class="tab ${i===index?'on':''}" onclick="showMenuFile('${s.id}',${i})">${esc(entry.name)}</button>`).join('')}</div><p class="hint">左右滑動可切換菜單</p>`:'';
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox" style="width:min(900px,100%)"><button class="btn light smallbtn" style="float:right" onclick="closeModal()">關閉</button><h2>${esc(s.name)}菜單</h2>${tabs}${content}</div></div>`;
+  };
 })();
 </script>
 <style>
@@ -1842,6 +1936,78 @@ menu=function(){
     const originalHistory=history;
     history=function(){originalHistory();requestAnimationFrame(pinHistoryTicker)};
   })();
+</script>
+<style id="external-menu-link-row-style">
+  .external-menu-link-row{display:grid;grid-template-columns:minmax(110px,.8fr) minmax(180px,2fr) auto;gap:8px;align-items:end;margin:8px 0}
+  .external-menu-link-row label{margin:0;font-size:13px}
+  @media(max-width:600px){.external-menu-link-row{grid-template-columns:1fr auto}.external-menu-link-row .external-link-url{grid-column:1 / -1}}
+</style>
+<script id="external-menu-link-rows">
+(()=>{
+  let rows=[];
+  const clean=value=>String(value||'').trim();
+  const safe=value=>String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const read=value=>String(value||'').split(/\r?\n/).map((line,index)=>{
+    const [name,...urls]=line.split(/[｜|]/),url=urls.join('|').trim();
+    return url?{name:clean(name)||`菜單 ${index+1}`,url}:{name:'',url:''};
+  }).filter(row=>row.name||row.url);
+  const serialize=()=>rows.filter(row=>clean(row.url)).map((row,index)=>`${clean(row.name)||`菜單 ${index+1}`}｜${clean(row.url)}`).join('\n');
+  const sync=()=>{const input=document.querySelector('#externalMenuLinks');if(input)input.value=serialize()};
+  const render=()=>{
+    const host=document.querySelector('#externalMenuLinkRows');if(!host)return;
+    host.innerHTML=rows.map((row,index)=>`<div class="external-menu-link-row"><label>菜單名稱<input value="${safe(row.name)}" placeholder="例如：午餐菜單" oninput="externalMenuLinkChange(${index},'name',this.value)"></label><label class="external-link-url">網址<input type="url" inputmode="url" value="${safe(row.url)}" placeholder="貼上公開網址" oninput="externalMenuLinkChange(${index},'url',this.value)"></label><button type="button" class="btn danger smallbtn" onclick="externalMenuLinkRemove(${index})" aria-label="移除此菜單">×</button></div>`).join('')+`<button type="button" class="btn light smallbtn" onclick="externalMenuLinkAdd()">＋ 新增菜單</button><div class="hint">菜單名稱直接填寫，後方貼上公開網址即可。</div>`;
+  };
+  const build=()=>{
+    const input=document.querySelector('#externalMenuLinks');
+    if(!input||document.querySelector('#externalMenuLinkRows'))return;
+    rows=read(input.value);if(!rows.length)rows=[{name:'',url:''}];
+    input.style.display='none';
+    const host=document.createElement('div');host.id='externalMenuLinkRows';input.before(host);render();sync();
+  };
+  window.externalMenuLinkChange=(index,key,value)=>{if(rows[index])rows[index][key]=value;sync()};
+  window.externalMenuLinkAdd=()=>{rows.push({name:'',url:''});render();sync()};
+  window.externalMenuLinkRemove=index=>{rows.splice(index,1);if(!rows.length)rows.push({name:'',url:''});render();sync()};
+  const adminWithLinkRows=admin;
+  admin=function(...args){const out=adminWithLinkRows.apply(this,args);if(state.adminTab===1)setTimeout(build,20);return out};
+  const editWithLinkRows=editStore;
+  editStore=function(id){const out=editWithLinkRows(id);setTimeout(build,40);return out};
+  const createWithLinkRows=createStore;
+  createStore=function(){sync();return createWithLinkRows()};
+})();
+</script>
+<script id="external-menu-cleanup-and-preview">
+(()=>{
+  const isExternal=value=>/^https?:\/\//i.test(String(value||'').trim());
+
+  /* Remove older uploaded menu files after switching to external menu links. */
+  let changed=false;
+  (data.stores||[]).forEach(s=>{
+    const files=s.menuFiles?.length?s.menuFiles:(s.importData?[{name:s.importName||'菜單',data:s.importData}]:[]);
+    const external=files.filter(file=>isExternal(file?.data));
+    if(external.length!==files.length||String(s.importData||'').startsWith('data:'))changed=true;
+    s.menuFiles=external;
+    s.importName=external[0]?.name||'';
+    s.importData=external[0]?.data||'';
+  });
+  if(changed)save();
+
+  /* The established-store preview only lists required option groups. */
+  previewStore=function(id){
+    const s=store(id);if(!s)return;
+    const rows=(s.items||[]).map(item=>{
+      const visible=optionGroups(item).filter(group=>group.required!==false);
+      const details=visible.length
+        ? visible.map(group=>`${esc(group.name)}（${group.values.map(esc).join('、')}）`).join('／')
+        : variants(item).map(variant=>esc(variant.spec)).join('／');
+      const pricing=visible.find(group=>group.pricing);
+      const price=pricing
+        ? pricing.values.map(value=>`NT$ ${Number(pricing.adjustments?.[value]||0).toLocaleString()}`).join('／')
+        : variants(item).map(variant=>`NT$ ${Number(variant.price||0).toLocaleString()}`).join('／');
+      return `<div class="menu-item"><div class="grow"><b>${esc(item.name)}</b><div class="small">${details}${price?`　${price}`:''}</div></div></div>`;
+    }).join('')||'<p class="small">尚無品項</p>';
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox"><button class="btn light smallbtn" style="float:right" onclick="closeModal()">關閉</button><span class="badge">${esc(s.category||'未分類')}</span><h2>${esc(s.name)}</h2><p class="small">${s.phone?`電話 ${esc(s.phone)}`:''}</p>${mapHtml(s.address)}${rows}</div></div>`;
+  };
+})();
 </script>
 </body>
 </html>
