@@ -2113,6 +2113,62 @@ menu=function(){
   };
 })();
 </script>
+<script id="bulk-edit-same-extra-group">
+/* Edit one extra-specification group, then apply its settings to every group
+   with the same name in this store menu. */
+(()=>{
+  const cloneRows=rows=>(rows||[]).map(row=>({id:crypto.randomUUID?.()||('row'+Date.now()+Math.random()),label:String(row.label||''),price:String(row.price??'')}));
+  const normalizedName=value=>String(value||'').trim().replace(/\s+/g,' ').toLocaleLowerCase();
+  const findGroup=(bid,iid,gid)=>{
+    const block=(state.menuBuilder||[]).find(entry=>entry.id===bid);
+    const item=block?.items?.find(entry=>entry.id===iid);
+    return item?.groups?.find(entry=>entry.id===gid);
+  };
+  window.builderApplySameNamedGroup=function(bid,iid,gid){
+    const source=findGroup(bid,iid,gid),key=normalizedName(source?.name);
+    if(!source||!key)return alert('請先填寫規格欄位名稱，再套用。');
+    const blocks=state.menuBuilder||[];
+    const blockLabel=block=>String(block.title||'').trim()||`空白${blocks.findIndex(entry=>entry.id===block.id)+1}`;
+    const choices=blocks.map(block=>({block,items:(block.items||[]).filter(item=>item.id!==iid)})).filter(choice=>choice.items.length);
+    if(!choices.length)return alert('至少需要另一個品項才能套用規格。');
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>選擇要套用的品項</h2><p class="small">將「${esc(source.name)}」套用到勾選的品項；套用後仍可各自修改。</p><div style="display:grid;gap:10px">${choices.map(({block,items})=>`<details style="padding:10px;border:1px solid var(--line);border-radius:10px"><summary style="cursor:pointer"><label class="builder-check" style="display:inline-flex;font-weight:700" onclick="event.stopPropagation()"><input type="checkbox" data-bulk-block-toggle data-block-id="${esc(block.id)}" checked onchange="builderToggleBulkBlock(this,'${block.id}')"> 【${esc(blockLabel(block))}】</label></summary><div style="display:grid;gap:6px;margin:10px 0 0 26px">${items.map(item=>`<label class="builder-check"><input type="checkbox" data-bulk-item data-bulk-item-block="${esc(block.id)}" value="${esc(block.id)}|${esc(item.id)}" checked> ${esc(item.name||'未命名品項')}</label>`).join('')}</div></details>`).join('')}</div><div class="row" style="margin-top:16px"><button type="button" class="btn light" onclick="closeModal()">取消</button><button type="button" class="btn" onclick="builderConfirmApplySameNamedGroup('${bid}','${iid}','${gid}')">套用選取品項</button></div></div></div>`;
+  };
+  window.builderToggleBulkBlock=function(toggle,bid){document.querySelectorAll('[data-bulk-item]').forEach(item=>{if(item.dataset.bulkItemBlock===bid)item.checked=toggle.checked});};
+  window.builderConfirmApplySameNamedGroup=function(bid,iid,gid){
+    const source=findGroup(bid,iid,gid),key=normalizedName(source?.name),selected=new Set([...document.querySelectorAll('[data-bulk-item]:checked')].map(input=>input.value));
+    if(!source||!key||!selected.size)return alert('請至少選擇一個品項。');
+    let count=0;
+    (state.menuBuilder||[]).forEach(block=>{
+      (block.items||[]).forEach(item=>{
+        if(!selected.has(`${block.id}|${item.id}`))return;
+        (item.groups||[]).forEach(group=>{
+        if(group.id===source.id||normalizedName(group.name)!==key)return;
+        group.noPrice=!!source.noPrice;
+        group.required=!!source.required;
+        group.rows=cloneRows(source.rows);
+        count++;
+        });
+        const hasSameName=(item.groups||[]).some(group=>normalizedName(group.name)===key);
+        if(!hasSameName){item.groups.push({id:crypto.randomUUID?.()||('group'+Date.now()+Math.random()),name:source.name,noPrice:!!source.noPrice,required:!!source.required,collapsed:false,rows:cloneRows(source.rows)});count++;}
+      });
+    });
+    closeModal();renderMenuBuilder();
+    alert(`已將「${source.name}」套用到 ${count} 個同名規格欄位。`);
+  };
+  const previousRender=window.renderMenuBuilder;
+  window.renderMenuBuilder=function(){
+    const result=previousRender.apply(this,arguments);
+    document.querySelectorAll('.extra-group-card').forEach(card=>{
+      if(card.querySelector('[data-apply-same-group]'))return;
+      const head=card.querySelector('.extra-group-head');if(!head)return;
+      const button=document.createElement('button');button.type='button';button.className='btn light smallbtn';button.dataset.applySameGroup='1';button.textContent='套用同名規格';
+      button.onclick=()=>builderApplySameNamedGroup(card.dataset.bid,card.dataset.iid,card.dataset.gid);
+      const collapse=head.querySelector('.group-collapse-btn');head.insertBefore(button,collapse||null);
+    });
+    return result;
+  };
+})();
+</script>
 <script id="external-menu-cleanup-and-preview">
 (()=>{
   const isExternal=value=>/^https?:\/\//i.test(String(value||'').trim());
