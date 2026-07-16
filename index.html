@@ -1984,13 +1984,18 @@ menu=function(){
   const saveWithExternalLinks=createStore;
   createStore=function(...args){
     const field=document.querySelector('#externalMenuLinks');
-    const raw=field?.value,id=document.querySelector('#sname')?.dataset.id,before=data.stores.length;
+    const raw=field?.value,
+      storeNote=document.querySelector('#snote')?.value||'',
+      menuNotice=document.querySelector('#smenuNotice')?.value||'',
+      id=document.querySelector('#sname')?.dataset.id,before=data.stores.length;
     const result=saveWithExternalLinks.apply(this,args);
     /* Validation failures leave the editor in place, so do not alter stored links. */
     if(raw===undefined||document.querySelector('#sname'))return result;
     const target=id?store(id):(data.stores.length>before?data.stores[data.stores.length-1]:null);
     if(!target)return result;
     const links=parse(raw);
+    target.note=storeNote.trim();
+    target.menuNotice=menuNotice.trim();
     target.menuFiles=links;
     target.importName=links[0]?.name||'';
     target.importData=links[0]?.data||'';
