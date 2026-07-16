@@ -2169,6 +2169,85 @@ menu=function(){
   };
 })();
 </script>
+<script id="default-menu-builder-collapse">
+/* Entering the menu editor starts with every section folded, matching the
+   existing "fold all" action without changing the user's later choices. */
+(()=>{
+  const foldAll=()=>{
+    if(!Array.isArray(state.menuBuilder))return;
+    state.menuBuilder.forEach(block=>{block.collapsed=true;});
+    window.renderMenuBuilder?.();
+  };
+  const adminBeforeDefaultFold=admin;
+  admin=function(...args){
+    const out=adminBeforeDefaultFold.apply(this,args);
+    if(state.adminTab===1)setTimeout(foldAll,40);
+    return out;
+  };
+  const editStoreBeforeDefaultFold=editStore;
+  editStore=function(...args){
+    const out=editStoreBeforeDefaultFold.apply(this,args);
+    setTimeout(foldAll,80);
+    return out;
+  };
+})();
+</script>
+<style id="builder-item-level-folding-style">
+/* A section first reveals a clean list of item names.  Each name can then be
+   opened independently, keeping large menus easy to scan. */
+.menu-builder > .menu-block.item-name-only > :not(.menu-block-head){display:none!important}
+.menu-builder > .menu-block.item-name-only .menu-block-head{margin-bottom:0;cursor:pointer}
+.menu-builder > .menu-block.item-name-only .menu-block-head strong::after{content:'（點選展開）';margin-left:7px;font-size:12px;font-weight:400;color:var(--muted)}
+</style>
+<script id="builder-item-level-folding">
+/* Section -> item name -> item details.  These UI-only flags stay in the
+   draft builder and do not alter the saved menu itself. */
+(()=>{
+  const originalRender=window.renderMenuBuilder;
+  if(typeof originalRender!=='function')return;
+
+  const setInitialFolds=()=>{
+    (state.menuBuilder||[]).forEach(block=>{
+      (block.items||[]).forEach(item=>{
+        if(item.__itemFoldInitialized!==true){
+          item.collapsed=true;
+          item.__itemFoldInitialized=true;
+        }
+        (item.groups||[]).forEach(group=>{
+          if(group.__groupFoldInitialized!==true){
+            group.collapsed=true;
+            group.__groupFoldInitialized=true;
+          }
+        });
+      });
+    });
+  };
+
+  window.renderMenuBuilder=function(...args){
+    setInitialFolds();
+    const result=originalRender.apply(this,args);
+    document.querySelectorAll('.builder-section[data-block]').forEach(section=>{
+      const block=(state.menuBuilder||[]).find(entry=>entry.id===section.dataset.block);
+      if(!block)return;
+      section.querySelectorAll(':scope > .menu-builder > .menu-block').forEach((card,index)=>{
+        const item=block.items?.[index];
+        if(!item)return;
+        const head=card.querySelector(':scope > .menu-block-head');
+        if(!head)return;
+        const title=head.querySelector('strong');
+        if(title)title.textContent=item.name?.trim()||`品項 ${index+1}`;
+        card.classList.toggle('item-name-only',item.collapsed!==false);
+        head.onclick=event=>{
+          if(event.target.closest('button,input,textarea,select,label'))return;
+          item.collapsed=!item.collapsed;
+          window.renderMenuBuilder();
+        };
+      });
+    });
+    return result;
+  };
+})();
+</script>
 <script id="external-menu-cleanup-and-preview">
 (()=>{
   const isExternal=value=>/^https?:\/\//i.test(String(value||'').trim());
