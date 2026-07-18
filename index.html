@@ -2381,7 +2381,7 @@ menu=function(){
     const sidebar=document.createElement('aside');sidebar.className='card desktop-store-sidebar';
     const editor=document.createElement('section');editor.className='desktop-store-editor';
     const categories=[...new Set(['飲料','主食',...(data.stores||[]).map(entry=>clean(entry.category)||'未分類')])];
-    sidebar.innerHTML=`<div class="desktop-store-title"><b>店家清單</b><button type="button" class="btn light smallbtn" onclick="desktopNewStore()">＋新增店家</button></div><div class="row" style="margin:0"><input id="desktopStoreSearch" type="search" aria-label="搜尋店家" placeholder="🔍 搜尋店家"><select id="desktopStoreCategory" aria-label="分類篩選"><option value="">全部分類</option>${categories.map(category=>`<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('')}</select></div><div class="desktop-store-list">${(data.stores||[]).slice().sort((a,b)=>Number(!!a.disabled)-Number(!!b.disabled)).map(entry=>{const category=clean(entry.category)||'未分類',search=clean([entry.name,category,entry.phone,entry.address,(entry.items||[]).map(item=>item.name).join(' ')].join(' ')).toLowerCase();return `<div class="desktop-store-row ${entry.id===selected?'active':''}" data-desktop-store="${entry.id}" data-desktop-store-category="${escapeHtml(category)}" data-desktop-store-search="${escapeHtml(search)}" onclick="desktopSelectStore('${entry.id}')"><div class="grow"><b>${escapeHtml(entry.name)}</b><div class="small">${entry.disabled?'已停用':escapeHtml(category)}</div></div><div class="desktop-store-actions"><button type="button" class="btn light smallbtn" title="複製店家" onclick="event.stopPropagation();desktopDuplicateStore('${entry.id}')">複製</button><button type="button" class="btn ${entry.disabled?'light':'danger'} smallbtn" title="停用或啟用店家" onclick="event.stopPropagation();desktopToggleStore('${entry.id}')">${entry.disabled?'啟用':'停用'}</button></div></div>`}).join('')||'<p class="small">尚未建立店家</p>'}</div>`;
+    sidebar.innerHTML=`<div class="desktop-store-title"><b>店家清單</b><button type="button" class="btn light smallbtn" onclick="desktopNewStore()">＋新增店家</button></div><div class="row" style="margin:0"><input id="desktopStoreSearch" type="search" aria-label="搜尋店家" placeholder="🔍 搜尋店家"><select id="desktopStoreCategory" aria-label="分類篩選"><option value="">全部分類</option>${categories.map(category=>`<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('')}</select></div><div class="desktop-store-list">${(data.stores||[]).slice().sort((a,b)=>Number(!!a.disabled)-Number(!!b.disabled)).map(entry=>{const category=clean(entry.category)||'未分類',search=clean([entry.name,category,entry.phone,entry.address,(entry.items||[]).map(item=>item.name).join(' ')].join(' ')).toLowerCase();return `<div class="desktop-store-row ${entry.id===selected?'active':''}" data-desktop-store="${entry.id}" data-desktop-store-category="${escapeHtml(category)}" data-desktop-store-search="${escapeHtml(search)}" onclick="desktopSelectStore('${entry.id}')"><div class="grow"><b>${escapeHtml(entry.name)}</b><div class="small">${entry.disabled?'已停用':escapeHtml(category)}</div></div><div class="desktop-store-actions"><button type="button" class="btn light smallbtn" title="修改店家" onclick="event.stopPropagation();editStore('${entry.id}')">修改</button><button type="button" class="btn danger smallbtn" title="刪除店家" onclick="event.stopPropagation();deleteStore('${entry.id}')">刪除</button><button type="button" class="btn ${entry.disabled?'light':'danger'} smallbtn" title="停用或啟用店家" onclick="event.stopPropagation();desktopToggleStore('${entry.id}')">${entry.disabled?'啟用':'停用'}</button></div></div>`}).join('')||'<p class="small">尚未建立店家</p>'}</div>`;
     const searchBox=sidebar.querySelector('#desktopStoreSearch'),categoryBox=sidebar.querySelector('#desktopStoreCategory');
     searchBox?.addEventListener('input',window.desktopFilterStores);
     searchBox?.addEventListener('search',window.desktopFilterStores);
@@ -2611,7 +2611,7 @@ menu=function(){
     const target=$('#accountList');if(!target)return;
     try{
       const {accounts}=await callAccounts({action:'list'});
-      target.innerHTML=(accounts||[]).map(account=>`<div class="order"><b>${escapeRole(account.login_name||account.id)}</b><span class="pill ${account.is_active?'paid':'unpaid'}" style="float:right">${account.is_active?'啟用中':'已停用'}</span><div class="small">一般管理員</div><button class="btn light smallbtn" style="margin-top:7px" onclick="setAdminAccountActive('${escapeRole(account.id)}',${account.is_active?'false':'true'})">${account.is_active?'停用':'啟用'}</button></div>`).join('')||'<p class="small">尚未建立一般管理員。</p>';
+      target.innerHTML=(accounts||[]).map(account=>`<div class="order"><b>${escapeRole(account.login_name||account.id)}</b><span class="pill ${account.is_active?'paid':'unpaid'}" style="float:right">${account.is_active?'啟用中':'已停用'}</span><div class="small">一般管理員</div><div class="adminlist" style="margin-top:7px"><button class="btn light smallbtn" onclick="setAdminAccountActive('${escapeRole(account.id)}',${account.is_active?'false':'true'})">${account.is_active?'停用':'啟用'}</button><button class="btn danger smallbtn" onclick="deleteAdminAccount('${escapeRole(account.id)}','${escapeRole(account.login_name||account.id)}')">刪除</button></div></div>`).join('')||'<p class="small">尚未建立一般管理員。</p>';
     }catch(error){target.textContent='讀取失敗：'+error.message;}
   };
   window.createAdminAccount=async()=>{
@@ -2626,6 +2626,10 @@ menu=function(){
   };
   window.setAdminAccountActive=async(id,is_active)=>{
     try{await callAccounts({action:'set_active',id,is_active});window.loadAdminAccounts();}catch(error){alert(error.message);}
+  };
+  window.deleteAdminAccount=async(id,loginName)=>{
+    if(!confirm(`確定要永久刪除一般管理員「${loginName}」嗎？此操作無法復原。`))return;
+    try{await callAccounts({action:'delete',id});window.loadAdminAccounts();}catch(error){alert(error.message);}
   };
   bootAuth();
 })();
@@ -2747,6 +2751,42 @@ menu=function(){
   window.__togetherLazyRefresh=()=>{
     if(!supported)return false;
     loadSharedState(true);return true;
+  };
+})();
+</script>
+<script id="desktop-menu-block-summary">
+/* 桌面菜單總覽：依區塊雙欄呈現，點選品項列即可回到原編輯器。 */
+(()=>{
+  const clean=value=>String(value||'').trim();
+  const escapeHtml=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  const priceSummary=item=>{
+    const rows=Array.isArray(item?.priceRows)?item.priceRows:[];
+    return rows.map(row=>`${clean(row.label)||'未命名'} $${clean(row.price)||'0'}`).join('、')||'尚未設定分量與價格';
+  };
+  const blockName=(block,index)=>clean(block?.name||block?.title||block?.section)||`區塊 ${index+1}`;
+  const style=document.createElement('style');
+  style.textContent=`
+    @media (min-width:900px){
+      #desktopMenuTable{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;border:0!important;border-radius:0!important;overflow:visible!important;background:transparent!important}
+      #desktopMenuTable .desktop-menu-block{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;min-width:0}
+      #desktopMenuTable .desktop-menu-block-title{padding:10px 12px;background:var(--soft);font-weight:800;color:var(--ink)}
+      #desktopMenuTable .desktop-menu-block-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,.9fr);gap:12px;align-items:center;width:100%;padding:10px 12px;border:0;border-top:1px solid var(--line);background:#fff;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+      #desktopMenuTable .desktop-menu-block-row:hover{background:#faf9f4}
+      #desktopMenuTable .desktop-menu-item-name{min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #desktopMenuTable .desktop-menu-item-price{min-width:0;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      #desktopMenuTable .desktop-menu-block-empty{padding:12px;color:var(--muted);font-size:13px}
+    }
+  `;
+  document.head.appendChild(style);
+  window.refreshDesktopMenuTable=()=>{
+    const table=document.querySelector('#desktopMenuTable');
+    if(!table)return;
+    const blocks=Array.isArray(state.menuBuilder)?state.menuBuilder:[];
+    table.innerHTML=blocks.map((block,blockIndex)=>{
+      const items=Array.isArray(block.items)?block.items:[];
+      const rows=items.map((item,itemIndex)=>`<button type="button" class="desktop-menu-block-row" onclick="desktopOpenMenuItem('${block.id}','${item.id}')"><span class="desktop-menu-item-name">${escapeHtml(clean(item.name)||`品項 ${itemIndex+1}`)}</span><span class="desktop-menu-item-price">${escapeHtml(priceSummary(item))}</span></button>`).join('')||'<div class="desktop-menu-block-empty">尚未建立品項</div>';
+      return `<section class="desktop-menu-block"><div class="desktop-menu-block-title">${escapeHtml(blockName(block,blockIndex))}</div>${rows}</section>`;
+    }).join('')||'<div class="desktop-menu-block-empty">尚未建立品項</div>';
   };
 })();
 </script>
