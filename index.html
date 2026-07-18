@@ -2477,6 +2477,17 @@ menu=function(){
   const isAdmin=()=>role==='sup'||role==='adm';
   const isSup=()=>role==='sup';
   const escapeRole=v=>esc(String(v||''));
+  const normalizeLoginName=value=>String(value||'').trim().toLowerCase();
+  const validLoginName=value=>/^[a-z0-9][a-z0-9._-]{2,23}$/.test(value);
+  const internalLoginEmail=(expected,loginName)=>`${expected}.${loginName}@together.local`;
+  const roleChoiceStyle=document.createElement('style');
+  roleChoiceStyle.textContent=`
+    .role-choice{width:min(620px,calc(100vw - 42px));padding:24px;display:grid;grid-template-columns:1fr 260px;gap:28px;align-items:center}
+    .role-choice h2{margin:0 0 12px;font-size:24px}.role-choice .small{margin:0}
+    .role-choice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.role-choice-actions .btn{width:100%;min-height:40px}.role-choice-actions .role-cancel{grid-column:1 / -1}
+    @media(max-width:540px){.role-choice{grid-template-columns:1fr;gap:20px}.role-choice-actions{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(roleChoiceStyle);
 
   async function bootAuth(){
     if(backendChecked)return backendReady;
@@ -2504,25 +2515,28 @@ menu=function(){
     return backendReady;
   }
   function loginChoice(){
-    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>後台登入</h2><p class="small">請選擇登入方式。</p><button class="btn full" onclick="roleSupGate()">調皮了</button><button class="btn light full" style="margin-top:10px" onclick="roleLoginForm('adm')">帳號登入</button><button class="btn light full" style="margin-top:10px" onclick="closeModal()">取消</button></div></div>`;
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox role-choice"><div><h2>後台登入</h2><p class="small">請選擇登入方式。</p></div><div class="role-choice-actions"><button class="btn" onclick="roleSupGate()">調皮了</button><button class="btn light" onclick="roleLoginForm('adm')">帳號登入</button><button class="btn light role-cancel" onclick="closeModal()">取消</button></div></div></div>`;
   }
   window.roleSupGate=()=>{
-    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>調皮了</h2><label>入口密碼</label><input id="roleGatePassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="請輸入入口密碼" onkeydown="if(event.key==='Enter')roleCheckSupGate()"><p class="small">通過入口碼後，仍須使用最高管理員帳號登入。</p><div class="row" style="margin-top:16px"><button class="btn light" onclick="openAdmin()">返回</button><button class="btn" onclick="roleCheckSupGate()">下一步</button></div></div></div>`;
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>調皮了</h2><label>入口密碼</label><input id="roleGatePassword" type="password" inputmode="numeric" autocomplete="current-password" placeholder="請輸入入口密碼" onkeydown="if(event.key==='Enter')roleCheckSupGate()"><p class="small">已登入過最高管理員的裝置，輸入後可直接進入後台。</p><div class="row" style="margin-top:16px"><button class="btn light" onclick="openAdmin()">返回</button><button class="btn" onclick="roleCheckSupGate()">進入後台</button></div></div></div>`;
     setTimeout(()=>$('#roleGatePassword')?.focus(),0);
   };
-  window.roleCheckSupGate=()=>{
+  window.roleCheckSupGate=async()=>{
     if($('#roleGatePassword')?.value!=='7777')return alert('密碼錯誤');
+    await bootAuth();
+    if(isSup()){closeModal();openAdmin();return;}
     window.roleLoginForm('sup');
   };
   window.roleLoginForm=expected=>{
     const title=expected==='sup'?'最高管理員帳號登入':'一般管理員帳號登入';
-    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>${title}</h2><label>Email</label><input id="roleEmail" type="email" autocomplete="username" placeholder="name@example.com"><label>密碼</label><input id="rolePassword" type="password" autocomplete="current-password" placeholder="請輸入帳號密碼" onkeydown="if(event.key==='Enter')roleSignIn('${expected}')"><div class="row" style="margin-top:16px"><button class="btn light" onclick="openAdmin()">返回</button><button class="btn" onclick="roleSignIn('${expected}')">登入</button></div></div></div>`;
-    setTimeout(()=>$('#roleEmail')?.focus(),0);
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>${title}</h2><label>帳號名稱</label><input id="roleLoginName" type="text" autocomplete="username" autocapitalize="none" placeholder="例如：youjhen"><p class="small">限 3～24 個英文字母、數字、句點、底線或連字號。</p><label>密碼</label><input id="rolePassword" type="password" autocomplete="current-password" placeholder="請輸入帳號密碼" onkeydown="if(event.key==='Enter')roleSignIn('${expected}')"><div class="row" style="margin-top:16px"><button class="btn light" onclick="openAdmin()">返回</button><button class="btn" onclick="roleSignIn('${expected}')">登入</button></div></div></div>`;
+    setTimeout(()=>$('#roleLoginName')?.focus(),0);
   };
   window.roleSignIn=async expected=>{
     if(!client)return alert('登入服務尚未就緒，請稍後再試。');
-    const email=$('#roleEmail')?.value.trim(),password=$('#rolePassword')?.value||'';
-    if(!email||!password)return alert('請輸入 Email 與密碼。');
+    const loginName=normalizeLoginName($('#roleLoginName')?.value),password=$('#rolePassword')?.value||'';
+    if(!validLoginName(loginName)||!password)return alert('請輸入正確的帳號名稱與密碼。');
+    const email=internalLoginEmail(expected,loginName);
     const {data:signIn,error:signInError}=await client.auth.signInWithPassword({email,password});
     if(signInError||!signIn.session)return alert('帳號或密碼錯誤。');
     setToken(signIn.session);
@@ -2586,21 +2600,23 @@ menu=function(){
   }
   window.showAdminAccounts=async()=>{
     if(!isSup())return alert('只有最高管理員可以管理帳號。');
-    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form" style="max-width:680px"><button class="btn light smallbtn" style="float:right" onclick="closeModal()">關閉</button><h2>一般管理員帳號</h2><div id="accountList" class="small">讀取中…</div><hr class="divider"><b>建立一般管理員</b><label>Email</label><input id="newAdminEmail" type="email" placeholder="name@example.com"><label>初始密碼（至少 12 字元）</label><input id="newAdminPassword" type="password" placeholder="請設定安全密碼"><button class="btn full" style="margin-top:12px" onclick="createAdminAccount()">建立一般管理員</button></div></div>`;
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form" style="max-width:680px"><button class="btn light smallbtn" style="float:right" onclick="closeModal()">關閉</button><h2>一般管理員帳號</h2><div id="accountList" class="small">讀取中…</div><hr class="divider"><b>建立一般管理員</b><label>帳號名稱</label><input id="newAdminLoginName" type="text" autocapitalize="none" placeholder="例如：youjhen"><p class="small">限 3～24 個英文字母、數字、句點、底線或連字號。</p><label>初始密碼（至少 4 字元）</label><input id="newAdminPassword" type="password" minlength="4" placeholder="請設定密碼"><button class="btn full" style="margin-top:12px" onclick="createAdminAccount()">建立一般管理員</button></div></div>`;
     await window.loadAdminAccounts();
   };
   window.loadAdminAccounts=async()=>{
     const target=$('#accountList');if(!target)return;
     try{
       const {accounts}=await callAccounts({action:'list'});
-      target.innerHTML=(accounts||[]).map(account=>`<div class="order"><b>${escapeRole(account.email||account.id)}</b><span class="pill ${account.is_active?'paid':'unpaid'}" style="float:right">${account.is_active?'啟用中':'已停用'}</span><div class="small">一般管理員</div><button class="btn light smallbtn" style="margin-top:7px" onclick="setAdminAccountActive('${escapeRole(account.id)}',${account.is_active?'false':'true'})">${account.is_active?'停用':'啟用'}</button></div>`).join('')||'<p class="small">尚未建立一般管理員。</p>';
+      target.innerHTML=(accounts||[]).map(account=>`<div class="order"><b>${escapeRole(account.login_name||account.id)}</b><span class="pill ${account.is_active?'paid':'unpaid'}" style="float:right">${account.is_active?'啟用中':'已停用'}</span><div class="small">一般管理員</div><button class="btn light smallbtn" style="margin-top:7px" onclick="setAdminAccountActive('${escapeRole(account.id)}',${account.is_active?'false':'true'})">${account.is_active?'停用':'啟用'}</button></div>`).join('')||'<p class="small">尚未建立一般管理員。</p>';
     }catch(error){target.textContent='讀取失敗：'+error.message;}
   };
   window.createAdminAccount=async()=>{
     try{
-      const email=$('#newAdminEmail')?.value.trim(),password=$('#newAdminPassword')?.value||'';
-      await callAccounts({action:'create',email,password});
-      $('#newAdminEmail').value='';$('#newAdminPassword').value='';
+      const login_name=normalizeLoginName($('#newAdminLoginName')?.value),password=$('#newAdminPassword')?.value||'';
+      if(!validLoginName(login_name))throw new Error('帳號名稱限 3～24 個英文字母、數字、句點、底線或連字號。');
+      if(password.length<4)throw new Error('密碼至少需要 4 個字元。');
+      await callAccounts({action:'create',login_name,password});
+      $('#newAdminLoginName').value='';$('#newAdminPassword').value='';
       alert('一般管理員已建立。');window.loadAdminAccounts();
     }catch(error){alert(error.message);}
   };
