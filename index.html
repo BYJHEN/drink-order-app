@@ -2924,6 +2924,13 @@ menu=function(){
   style.textContent=`
     @media (min-width:900px){
       #fullMenuFields.desktop-menu-edit-layout{display:grid;grid-template-columns:minmax(310px,.78fr) minmax(440px,1.22fr);gap:18px;align-items:start}
+      /* Let only the menu editor use the unused left-side desktop space. */
+      #desktopStoreWorkspace .desktop-store-editor #fullMenuFields.desktop-menu-edit-layout{margin-left:-320px;width:calc(100% + 320px)}
+      /* The notice and menu heading stay aligned with the normal store form. */
+      #desktopStoreWorkspace .desktop-store-editor #fullMenuFields.desktop-menu-edit-layout>label,
+      #desktopStoreWorkspace .desktop-store-editor #fullMenuFields.desktop-menu-edit-layout>#smenuNotice,
+      #desktopStoreWorkspace .desktop-store-editor #fullMenuFields.desktop-menu-edit-layout>.between,
+      #desktopStoreWorkspace .desktop-store-editor #fullMenuFields.desktop-menu-edit-layout>.summary{margin-left:320px;width:calc(100% - 320px)}
       #fullMenuFields.desktop-menu-edit-layout>label,#fullMenuFields.desktop-menu-edit-layout>#smenuNotice,#fullMenuFields.desktop-menu-edit-layout>.between,#fullMenuFields.desktop-menu-edit-layout>.summary{grid-column:1/-1}
       #fullMenuFields.desktop-menu-edit-layout>#desktopMenuTable{grid-column:1;grid-row:5;display:block!important;margin:0!important;max-height:calc(100vh - 190px);overflow:auto;border:1px solid var(--line)!important;border-radius:12px!important;background:#fff!important}
       #fullMenuFields.desktop-menu-edit-layout>#menuBuilder{grid-column:2;grid-row:5;position:sticky;top:18px;align-self:start;max-height:calc(100vh - 38px);overflow:auto;padding-right:4px}
