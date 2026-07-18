@@ -3170,14 +3170,99 @@ menu=function(){
   };
 })();
 </script>
+<script id="order-edit-direct-open">
+/* 「修改」直接開啟已帶入內容的訂單編輯頁。 */
+(()=>{
+  const openEditor=id=>{
+    const order=data.orders.find(entry=>entry.id===id);
+    const orderGroup=order&&group(order.groupId);
+    const orderStore=orderGroup&&store(orderGroup.storeId);
+    if(!order||!orderGroup||!orderStore||!isOpen(orderGroup)){
+      alert('此訂單目前無法修改');return;
+    }
+    const cart={};
+    (orderStore.items||[]).forEach((item,index)=>{
+      const selected=(order.items||[]).find(entry=>entry.name===item.name);
+      if(!selected)return;
+      const groups=optionGroups(item),itemVariants=variants(item);
+      const entry={q:Number(selected.qty)||0,variant:0,options:{}};
+      if(groups.length){
+        const selectedOptions=String(selected.spec||'').split('、').reduce((all,part)=>{
+          const at=part.indexOf(':');if(at>0)all[part.slice(0,at)]=part.slice(at+1);return all;
+        },{});
+        groups.forEach(option=>{entry.options[option.name]=selectedOptions[option.name]||option.values[0]||''});
+      }else{
+        const matched=itemVariants.findIndex(variant=>variant.spec===selected.spec);
+        entry.variant=matched<0?0:matched;
+      }
+      cart[index]=entry;
+    });
+    try{
+      const key=KEY+'-owned-order-ids';
+      const owned=JSON.parse(localStorage.getItem(key)||'{}');
+      owned[id]=true;localStorage.setItem(key,JSON.stringify(owned));
+    }catch(_){}
+    state.group=orderGroup.id;state.buyer=order.buyer;state.cart=cart;
+    state.editingOrderId=id;state.selectedItem=null;state.focusItem=null;
+    /* 先進入與一般訂購相同的菜單頁，保留全部商品／分類頁籤。 */
+    go('menu');
+  };
+  window.editOwnOrder=openEditor;
+  /* Capture clicks before old inline handlers, so the 修改 button remains
+     reliable even if older menu scripts redraw the history list. */
+  document.addEventListener('click',event=>{
+    const button=event.target.closest?.('button[onclick*="editOwnOrder"]');
+    const match=button?.getAttribute('onclick')?.match(/editOwnOrder\('([^']+)'\)/);
+    if(!match)return;
+    event.preventDefault();event.stopImmediatePropagation();openEditor(match[1]);
+  },true);
+})();
+</script>
 <script id="final-external-menu-url-save">
-/* Final save guard: the visible single-link fields always write back to the
-   store record, even after the legacy editor redraws itself. */
+/* Menu links are URL-only. Keep the legacy file input hidden and save the
+   entered link after the legacy editor has completed its redraw. */
 (()=>{
   const normalUrl=value=>{
     const text=String(value||'').trim();
     if(!text)return '';
     return /^https?:\/\//i.test(text)?text:`https://${text}`;
+  };
+  const hideLegacyMenuUpload=()=>{
+    const root=document.querySelector('#view');
+    if(!root)return;
+    const input=root.querySelector('input[type="file"]');
+    if(input){
+      input.style.setProperty('display','none','important');
+      const previous=input.previousElementSibling;
+      if(previous?.tagName==='LABEL')previous.style.setProperty('display','none','important');
+    }
+    root.querySelector('#filehint')?.style.setProperty('display','none','important');
+    root.querySelector('#menuFileList')?.style.setProperty('display','none','important');
+  };
+  const applyMenuUrl=snapshot=>{
+    let target=snapshot.id&&store(snapshot.id);
+    if(!target)target=(data.stores||[]).find(entry=>!snapshot.beforeIds.has(entry.id));
+    if(!target)return;
+    target.menuFiles=snapshot.url?[{name:snapshot.name,data:snapshot.url}]:[];
+    target.importName=snapshot.url?snapshot.name:'';
+    target.importData=snapshot.url?snapshot.url:'';
+    save();
+  };
+  const fillSavedMenuUrl=id=>{
+    const target=store(id);
+    if(!target)return;
+    const files=Array.isArray(target.menuFiles)&&target.menuFiles.length
+      ?target.menuFiles
+      :(target.importData?[{name:target.importName||'菜單',data:target.importData}]:[]);
+    const link=files.find(file=>/^https?:\/\//i.test(String(file?.data||'')));
+    const name=link?.name||'';
+    const url=link?.data||'';
+    const hidden=document.querySelector('#externalMenuLinks');
+    if(hidden)hidden.value=url?`${name||'菜單'}/${url}`:'';
+    const nameField=document.querySelector('#singleMenuName');
+    const urlField=document.querySelector('#singleMenuUrl');
+    if(nameField)nameField.value=name;
+    if(urlField)urlField.value=url;
   };
   const previousCreateStore=window.createStore;
   window.createStore=function(...args){
@@ -3186,16 +3271,22 @@ menu=function(){
     const id=document.querySelector('#sname')?.dataset.id;
     const hidden=document.querySelector('#externalMenuLinks');
     if(hidden)hidden.value=url?`${name}/${url}`:'';
+    const snapshot={id,name,url,beforeIds:new Set((data.stores||[]).map(entry=>entry.id))};
     const result=previousCreateStore.apply(this,args);
-    const target=id&&store(id);
-    if(target){
-      target.menuFiles=url?[{name,data:url}]:[];
-      target.importName=url?name:'';
-      target.importData=url?url:'';
-      save();
-    }
+    setTimeout(()=>applyMenuUrl(snapshot),0);
     return result;
   };
+  /* The desktop editor renders a fresh form when 「修改」 is pressed.
+     Fill its URL fields from the already-saved store after that render. */
+  const previousEditStore=window.editStore;
+  window.editStore=function(id,...args){
+    const result=previousEditStore.apply(this,[id,...args]);
+    [0,90,250,600].forEach(delay=>setTimeout(()=>fillSavedMenuUrl(id),delay));
+    return result;
+  };
+  const refresh=()=>setTimeout(hideLegacyMenuUpload,0);
+  document.addEventListener('DOMContentLoaded',refresh);
+  new MutationObserver(refresh).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
 </body>
