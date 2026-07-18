@@ -375,7 +375,7 @@ function adminStores(){
   <label>建立店家方式</label>
   <div class="build-methods">
     <div class="build-method ${mode==='full'?'on':''}" data-mode="full" onclick="setStoreBuildMode('full')"><b>方式 1｜建立完整菜單</b><span class="small">輸入餐點、規格與價格，訂購人直接選擇。</span></div>
-    <div class="build-method ${mode==='quick'?'on':''}" data-mode="quick" onclick="setStoreBuildMode('quick')"><b>方式 2｜只上傳原始菜單</b><span class="small">適合臨時開團，由訂購人自行輸入商品。</span></div>
+    <div class="build-method ${mode==='quick'?'on':''}" data-mode="quick" onclick="setStoreBuildMode('quick')"><b>方式 2｜只上傳菜單網址</b><span class="small">適合臨時開團，由訂購人自行輸入商品。</span></div>
   </div>
   <label>店家名稱${reqMark()}</label><input id="sname" placeholder="例如：好味便當">
   <div class="row"><div><label>分類（選填）</label><input id="scat" list="categoryList" placeholder="飲料、主食或自訂分類"><datalist id="categoryList">${categories.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div><div><label>店家電話（選填）</label><input id="sphone" type="tel" inputmode="tel" placeholder="例如：02-1234-5678"></div></div>
@@ -3158,6 +3158,34 @@ menu=function(){
     const choices=blocks.map(block=>({block,items:(block.items||[]).filter(item=>item.id!==iid)})).filter(choice=>choice.items.length);
     if(!choices.length)return alert('沒有其他可套用的品項。');
     $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>選擇要套用的品項</h2><p class="small">將「${esc(source.name)}」的規格套用到勾選品項，套用後仍可各自修改。</p><div class="bulk-apply-grid">${choices.map(({block,items})=>`<section class="bulk-apply-card"><div class="bulk-apply-card-head"><label class="builder-check"><input type="checkbox" data-bulk-block-toggle data-block-id="${esc(block.id)}" checked onchange="builderToggleBulkBlock(this,'${block.id}')">【${esc(blockLabel(block))}】</label><button type="button" class="bulk-apply-toggle" aria-label="展開或收合品項" onclick="builderToggleBulkSection(this,'${block.id}')">▸</button></div><div class="bulk-apply-items" data-bulk-list hidden>${items.map(item=>`<label class="builder-check"><input type="checkbox" data-bulk-item data-bulk-item-block="${esc(block.id)}" value="${esc(block.id)}|${esc(item.id)}" checked> ${esc(item.name||'未命名品項')}</label>`).join('')}</div></section>`).join('')}</div><div class="row" style="margin-top:16px"><button type="button" class="btn light" onclick="closeModal()">取消</button><button type="button" class="btn" onclick="builderConfirmApplySameNamedGroup('${bid}','${iid}','${gid}')">套用選取品項</button></div></div></div>`;
+  };
+})();
+</script>
+<script id="final-external-menu-url-save">
+/* Final save guard: the visible single-link fields always write back to the
+   store record, even after the legacy editor redraws itself. */
+(()=>{
+  const normalUrl=value=>{
+    const text=String(value||'').trim();
+    if(!text)return '';
+    return /^https?:\/\//i.test(text)?text:`https://${text}`;
+  };
+  const previousCreateStore=window.createStore;
+  window.createStore=function(...args){
+    const name=String(document.querySelector('#singleMenuName')?.value||'').trim()||'菜單';
+    const url=normalUrl(document.querySelector('#singleMenuUrl')?.value);
+    const id=document.querySelector('#sname')?.dataset.id;
+    const hidden=document.querySelector('#externalMenuLinks');
+    if(hidden)hidden.value=url?`${name}/${url}`:'';
+    const result=previousCreateStore.apply(this,args);
+    const target=id&&store(id);
+    if(target){
+      target.menuFiles=url?[{name,data:url}]:[];
+      target.importName=url?name:'';
+      target.importData=url?url:'';
+      save();
+    }
+    return result;
   };
 })();
 </script>
