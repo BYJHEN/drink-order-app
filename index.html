@@ -2536,7 +2536,11 @@ menu=function(){
     if(!client)return alert('登入服務尚未就緒，請稍後再試。');
     const loginName=normalizeLoginName($('#roleLoginName')?.value),password=$('#rolePassword')?.value||'';
     if(!validLoginName(loginName)||!password)return alert('請輸入正確的帳號名稱與密碼。');
-    const email=internalLoginEmail(expected,loginName);
+    let email=internalLoginEmail(expected,loginName);
+    try{
+      const {data:resolvedEmail,error:resolveError}=await client.rpc('resolve_admin_login_email',{p_login_name:loginName,p_expected_role:expected});
+      if(!resolveError&&resolvedEmail)email=resolvedEmail;
+    }catch(_){/* 舊版資料庫尚未套用對照函式時，使用新帳號的內部識別。 */}
     const {data:signIn,error:signInError}=await client.auth.signInWithPassword({email,password});
     if(signInError||!signIn.session)return alert('帳號或密碼錯誤。');
     setToken(signIn.session);
