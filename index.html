@@ -823,10 +823,12 @@ body{touch-action:auto!important}
 .collapsed-group-options{display:block;margin-top:3px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .group-collapse-btn{white-space:nowrap}
 .extra-group-body{margin-top:8px}
-.extra-group-body{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.extra-group-body>[role="radiogroup"]{margin:0}
-.extra-group-body>label.builder-check{margin:0 0 0 auto;white-space:nowrap}
-.extra-group-body>.builder-row,.extra-group-body>.builder-add{flex-basis:100%}
+.extra-group-body{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.extra-group-body>[role="radiogroup"]{grid-column:1;margin:0}
+.extra-group-body>label.builder-check{grid-column:2;margin:0;white-space:nowrap}
+.extra-group-body>.builder-row,.extra-group-body>.builder-add{grid-column:1/-1;width:100%}
+.extra-group-body>.builder-row{grid-template-columns:minmax(0,1fr) minmax(88px,.58fr) 38px!important;gap:8px}
+.extra-group-body>.builder-row .builder-eq{display:none!important}
 @media(max-width:600px){
  .extra-group-head{grid-template-columns:36px minmax(0,1fr) auto 36px;gap:6px}
  .group-drag-handle{width:36px;height:38px}
