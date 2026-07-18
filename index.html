@@ -823,6 +823,10 @@ body{touch-action:auto!important}
 .collapsed-group-options{display:block;margin-top:3px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .group-collapse-btn{white-space:nowrap}
 .extra-group-body{margin-top:8px}
+.extra-group-body{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.extra-group-body>[role="radiogroup"]{margin:0}
+.extra-group-body>label.builder-check{margin:0 0 0 auto;white-space:nowrap}
+.extra-group-body>.builder-row,.extra-group-body>.builder-add{flex-basis:100%}
 @media(max-width:600px){
  .extra-group-head{grid-template-columns:36px minmax(0,1fr) auto 36px;gap:6px}
  .group-drag-handle{width:36px;height:38px}
@@ -897,7 +901,7 @@ body{touch-action:auto!important}
       </div>
       ${collapsed?'':`<div class="extra-group-body">
         <div class="builder-check" role="radiogroup" aria-label="${escAttr(g.name||'其他規格')}選擇方式"><label><input type="radio" name="required-${g.id}" ${g.required?'checked':''} onchange="builderSetGroupRequired('${bid}','${iid}','${g.id}',true)"> 必選</label><label><input type="radio" name="required-${g.id}" ${!g.required?'checked':''} onchange="builderSetGroupRequired('${bid}','${iid}','${g.id}',false)"> 選填</label></div>
-        <label class="builder-check"><input type="checkbox" ${g.noPrice?'checked':''} onchange="builderToggleGroupNoPrice('${bid}','${iid}','${g.id}',this.checked)"> 此規格不需價格（例如：正常、去香菜、飯硬）</label>
+        <label class="builder-check"><input type="checkbox" ${g.noPrice?'checked':''} onchange="builderToggleGroupNoPrice('${bid}','${iid}','${g.id}',this.checked)"> 不需價格</label>
         ${g.rows.map(r=>`<div class="builder-row ${g.noPrice?'no-price':''}"><div class="builder-field builder-label"><label>選項名稱</label><input placeholder="例如：${g.noPrice?'正常':'加滷蛋'}" value="${escAttr(r.label)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','label',this.value)"></div>${g.noPrice?'':`<div class="builder-eq">=+</div><div class="builder-field builder-price"><label>加價</label><input type="number" min="0" step="1" inputmode="decimal" placeholder="15" value="${escAttr(r.price)}" oninput="builderSetGroupRow('${bid}','${iid}','${g.id}','${r.id}','price',this.value)"></div>`}<button type="button" class="btn danger builder-remove" onclick="builderRemoveGroupRow('${bid}','${iid}','${g.id}','${r.id}')">×</button></div>`).join('')}
         <button type="button" class="btn light smallbtn builder-add" style="margin-top:8px" onclick="builderAddGroupRow('${bid}','${iid}','${g.id}')">＋ 選項</button>
       </div>`}
@@ -2754,6 +2758,119 @@ menu=function(){
   };
 })();
 </script>
+<style id="desktop-menu-builder-two-column-layout">
+/* Desktop only: make each item editor easier to scan in two columns. */
+@media (min-width: 900px){
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px 18px;
+    align-items:start;
+  }
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .menu-block-head,
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > div[style*="margin-top:12px"],
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > div[style*="margin-top:14px"],
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-add,
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-actions{
+    grid-column:1 / -1;
+    margin-top:0!important;
+  }
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .menu-block-head{margin-bottom:0}
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-field{margin:0!important}
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-row{
+    grid-template-columns:minmax(0,1fr) minmax(0,.72fr) 38px;
+    gap:8px;
+    margin-top:0;
+  }
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-row .builder-eq{display:none}
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-row .builder-label,
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-row .builder-price,
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .builder-row .builder-remove{grid-column:auto}
+  #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block > .extra-group-card{
+    grid-column:auto;
+    margin-top:0!important;
+    min-width:0;
+  }
+  #menuBuilder .builder-section:not(.is-collapsed) .extra-group-card .builder-row{
+    grid-template-columns:minmax(0,1fr) minmax(0,.72fr) 38px;
+  }
+  #menuBuilder .builder-section:not(.is-collapsed) .extra-group-card .builder-row.no-price{
+    grid-template-columns:minmax(0,1fr) 38px;
+  }
+  #menuBuilder .builder-section:not(.is-collapsed) .extra-group-card .builder-row.no-price .builder-eq{display:none}
+}
+</style>
+<script id="desktop-edit-store-repair">
+/* Keep the desktop "修改" action independent from temporary form drafts. */
+(()=>{
+  const clean=value=>String(value||'').trim();
+  const menuLinksFor=entry=>{
+    const files=entry?.menuFiles?.length
+      ? entry.menuFiles
+      : (entry?.importData?[{name:entry.importName||'菜單',data:entry.importData}]:[]);
+    return files
+      .filter(file=>/^https?:\/\//i.test(String(file?.data||'')))
+      .map(file=>`${clean(file.name)||'菜單'}/${clean(file.data)}`)
+      .join('\n');
+  };
+  const fillStoreForm=id=>{
+    const entry=store(id);
+    const name=document.querySelector('#sname');
+    if(!entry||!name)return false;
+    name.value=entry.name||'';
+    name.dataset.id=entry.id;
+    const set=(selector,value)=>{const field=document.querySelector(selector);if(field)field.value=value??''};
+    set('#scat',entry.category||'');
+    set('#sphone',entry.phone||'');
+    set('#saddress',entry.address||'');
+    set('#smethod',entry.method||'');
+    set('#snote',entry.note||'');
+    set('#smenuNotice',entry.menuNotice||'');
+    set('#externalMenuLinks',menuLinksFor(entry));
+    return true;
+  };
+  const renderAdmin=window.admin;
+  const uid=()=>crypto.randomUUID?.()||(`desktop-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  const toBuilder=items=>{
+    const blocks=[];let previousSection=Symbol('none'),block;
+    (items||[]).forEach(source=>{
+      const section=source.section||'';
+      if(section!==previousSection){
+        block={id:uid(),title:section,items:[],collapsed:false};
+        blocks.push(block);previousSection=section;
+      }
+      const sourceGroups=Array.isArray(source.optionGroups)?source.optionGroups:[];
+      const priceGroup=sourceGroups.find(group=>group.pricing)||sourceGroups.find(group=>/分量|容量|價格/.test(String(group.name||''))&&Object.keys(group.adjustments||{}).length);
+      const priceRows=priceGroup
+        ? (priceGroup.values||[]).map(value=>({id:uid(),label:value,price:String(priceGroup.adjustments?.[value]??0)}))
+        : [{id:uid(),label:source.specs||'固定規格',price:String(source.price??0)}];
+      block.items.push({
+        id:uid(),name:source.name||'',notice:source.notice||'',collapsed:false,
+        priceRows:priceRows.length?priceRows:[{id:uid(),label:'',price:''}],
+        groups:sourceGroups.filter(group=>group!==priceGroup).map(group=>{
+          const values=Array.isArray(group.values)?group.values:[];
+          const hasPrice=values.some(value=>Object.prototype.hasOwnProperty.call(group.adjustments||{},value));
+          return {id:uid(),name:group.name||'',noPrice:!hasPrice,required:group.required!==false,collapsed:false,
+            rows:(values.length?values:['']).map(value=>({id:uid(),label:value,price:hasPrice?String(group.adjustments?.[value]??0):''}))};
+        })
+      });
+    });
+    return blocks.length?blocks:[{id:uid(),title:'',items:[{id:uid(),name:'',notice:'',priceRows:[{id:uid(),label:'',price:''}],groups:[]}]}];
+  };
+  window.editStore=function(id){
+    const entry=store(id);if(!entry)return;
+    window.clearStoreDraft?.();
+    state.adminTab=1;
+    state.storeQuery='';state.storeCategory='';
+    state.storeBuildMode=entry.quickMenu?'quick':'full';
+    state.desktopStoreId=id;
+    state.menuBuilder=toBuilder(entry.items||[]);
+    renderAdmin();
+    [0,90,250,600].forEach(delay=>setTimeout(()=>fillStoreForm(id),delay));
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+})();
+</script>
 <script id="desktop-menu-block-summary">
 /* 桌面菜單總覽：依區塊雙欄呈現，點選品項列即可回到原編輯器。 */
 (()=>{
@@ -2787,6 +2904,260 @@ menu=function(){
       const rows=items.map((item,itemIndex)=>`<button type="button" class="desktop-menu-block-row" onclick="desktopOpenMenuItem('${block.id}','${item.id}')"><span class="desktop-menu-item-name">${escapeHtml(clean(item.name)||`品項 ${itemIndex+1}`)}</span><span class="desktop-menu-item-price">${escapeHtml(priceSummary(item))}</span></button>`).join('')||'<div class="desktop-menu-block-empty">尚未建立品項</div>';
       return `<section class="desktop-menu-block"><div class="desktop-menu-block-title">${escapeHtml(blockName(block,blockIndex))}</div>${rows}</section>`;
     }).join('')||'<div class="desktop-menu-block-empty">尚未建立品項</div>';
+  };
+})();
+</script>
+<script id="desktop-menu-editor-interaction">
+/* 桌面版欄位式菜單編輯：左側總覽、右側就地編輯；手機版維持原本流程。 */
+(()=>{
+  const clean=value=>String(value??'').trim();
+  const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  const isDesktop=()=>matchMedia('(min-width:900px)').matches;
+  const blocks=()=>Array.isArray(state.menuBuilder)?state.menuBuilder:[];
+  const findBlock=id=>blocks().find(block=>block.id===id);
+  const priceSummary=item=>(item?.priceRows||[]).map(row=>`${clean(row.label)||'固定規格'} $${clean(row.price)||'0'}`).join('、')||'尚未設定';
+  const blockName=(block,index)=>clean(block?.title||block?.name||block?.section)||`區塊 ${index+1}`;
+
+  const style=document.createElement('style');
+  style.textContent=`
+    @media (min-width:900px){
+      #fullMenuFields.desktop-menu-edit-layout{display:grid;grid-template-columns:minmax(310px,.78fr) minmax(440px,1.22fr);gap:18px;align-items:start}
+      #fullMenuFields.desktop-menu-edit-layout>label,#fullMenuFields.desktop-menu-edit-layout>#smenuNotice,#fullMenuFields.desktop-menu-edit-layout>.between,#fullMenuFields.desktop-menu-edit-layout>.summary{grid-column:1/-1}
+      #fullMenuFields.desktop-menu-edit-layout>#desktopMenuTable{grid-column:1;grid-row:5;display:block!important;margin:0!important;max-height:calc(100vh - 190px);overflow:auto;border:1px solid var(--line)!important;border-radius:12px!important;background:#fff!important}
+      #fullMenuFields.desktop-menu-edit-layout>#menuBuilder{grid-column:2;grid-row:5;position:sticky;top:18px;align-self:start;max-height:calc(100vh - 38px);overflow:auto;padding-right:4px}
+      #desktopMenuTable .desktop-menu-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--soft);border-bottom:1px solid var(--line)}
+      #desktopMenuTable .desktop-menu-toolbar b{font-size:15px}
+      #desktopMenuTable .desktop-menu-toolbar-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+      #desktopMenuTable .desktop-menu-block{border:0!important;border-radius:0!important;border-bottom:1px solid var(--line)!important;overflow:visible!important;background:#fff!important}
+      #desktopMenuTable .desktop-menu-block:last-child{border-bottom:0!important}
+      #desktopMenuTable .desktop-menu-block-title{display:flex;align-items:center;gap:7px;padding:9px 10px!important;background:#faf9f4!important}
+      #desktopMenuTable .desktop-menu-block-select{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);padding:3px 0;text-align:left;font:inherit;font-weight:800;cursor:pointer}
+      #desktopMenuTable .desktop-menu-block-select:hover{text-decoration:underline}
+      #desktopMenuTable .desktop-menu-block-title .smallbtn{padding:5px 8px;white-space:nowrap}
+      #desktopMenuTable .desktop-menu-block-row{grid-template-columns:minmax(0,1fr) minmax(105px,.8fr)!important}
+      #menuBuilder .builder-section.desktop-editor-hidden{display:none!important}
+      #menuBuilder .builder-section .menu-builder>.menu-block.desktop-editor-hidden{display:none!important}
+      #menuBuilder .builder-section.desktop-editor-selected{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:3px}
+      #menuBuilder .builder-section .menu-block.desktop-editor-selected{outline:2px solid color-mix(in srgb,var(--accent) 35%,transparent);outline-offset:2px}
+    }
+  `;
+  document.head.appendChild(style);
+
+  const selected=()=>state.desktopMenuSelection||{};
+  const setSelection=(blockId,itemId='')=>{state.desktopMenuSelection={blockId,itemId};};
+
+  function applyEditorFocus(){
+    if(!isDesktop())return;
+    const active=selected();
+    const allBlocks=blocks();
+    if(!active.blockId&&allBlocks[0])setSelection(allBlocks[0].id,'');
+    const current=selected();
+    document.querySelector('#fullMenuFields')?.classList.add('desktop-menu-edit-layout');
+    document.querySelectorAll('#menuBuilder .builder-section').forEach(section=>{
+      const show=section.dataset.block===current.blockId;
+      section.classList.toggle('desktop-editor-hidden',!show);
+      section.classList.toggle('desktop-editor-selected',show);
+      if(!show)return;
+      const directItems=[...section.querySelectorAll(':scope > .menu-builder > .menu-block')];
+      const target=(findBlock(current.blockId)?.items||[]).findIndex(item=>item.id===current.itemId);
+      directItems.forEach((node,index)=>{
+        const itemShow=!current.itemId||index===target;
+        node.classList.toggle('desktop-editor-hidden',!itemShow);
+        node.classList.toggle('desktop-editor-selected',itemShow&&!!current.itemId);
+      });
+    });
+  }
+
+  window.desktopMenuSelectBlock=(blockId)=>{
+    const block=findBlock(blockId);if(!block)return;
+    block.collapsed=false;setSelection(blockId,'');window.renderMenuBuilder?.();
+  };
+  window.desktopMenuSelectItem=(blockId,itemId)=>{
+    const block=findBlock(blockId);if(!block)return;
+    block.collapsed=false;setSelection(blockId,itemId);window.renderMenuBuilder?.();
+  };
+  window.desktopMenuToggleBlock=(blockId)=>{
+    const block=findBlock(blockId);if(!block)return;
+    block.collapsed=!block.collapsed;window.renderMenuBuilder?.();
+  };
+  window.desktopMenuAddItem=()=>{
+    const current=selected();
+    const block=findBlock(current.blockId)||blocks()[0];
+    if(!block)return;
+    const before=(block.items||[]).map(item=>item.id);
+    window.builderAddItem?.(block.id,false);
+    const added=(block.items||[]).find(item=>!before.includes(item.id));
+    if(added)setSelection(block.id,added.id);
+    window.renderMenuBuilder?.();
+  };
+  window.desktopMenuSave=()=>window.createStore?.();
+
+  const previousRefresh=window.refreshDesktopMenuTable;
+  window.refreshDesktopMenuTable=()=>{
+    if(!isDesktop())return previousRefresh?.();
+    const table=document.querySelector('#desktopMenuTable');if(!table)return;
+    const active=selected();
+    table.innerHTML=`<div class="desktop-menu-toolbar"><b>欄位式菜單編輯</b><div class="desktop-menu-toolbar-actions"><button type="button" class="btn light smallbtn" onclick="desktopMenuAddItem()">＋新增品項</button><button type="button" class="btn smallbtn" onclick="desktopMenuSave()">儲存</button></div></div>${blocks().map((block,blockIndex)=>{
+      const title=blockName(block,blockIndex),items=Array.isArray(block.items)?block.items:[];
+      const rows=block.collapsed?'':items.map((item,itemIndex)=>`<button type="button" class="desktop-menu-block-row" onclick="desktopMenuSelectItem('${block.id}','${item.id}')"><span class="desktop-menu-item-name">${esc(clean(item.name)||`品項 ${itemIndex+1}`)}</span><span class="desktop-menu-item-price">${esc(priceSummary(item))}</span></button>`).join('')||'<div class="desktop-menu-block-empty">尚未建立品項</div>';
+      return `<section class="desktop-menu-block ${active.blockId===block.id?'active':''}"><div class="desktop-menu-block-title"><button type="button" class="desktop-menu-block-select" onclick="desktopMenuSelectBlock('${block.id}')">${esc(title)}</button><button type="button" class="btn light smallbtn" onclick="event.stopPropagation();desktopMenuToggleBlock('${block.id}')">${block.collapsed?'展開':'摺疊'}</button></div>${rows}</section>`;
+    }).join('')||'<div class="desktop-menu-block-empty">尚未建立品項</div>'}`;
+  };
+
+  const previousRender=window.renderMenuBuilder;
+  if(typeof previousRender==='function'){
+    window.renderMenuBuilder=function(...args){
+      const result=previousRender.apply(this,args);
+      setTimeout(()=>{window.refreshDesktopMenuTable?.();applyEditorFocus();},0);
+      return result;
+    };
+  }
+  window.addEventListener('resize',()=>setTimeout(applyEditorFocus,0));
+})();
+</script>
+<script id="desktop-item-editor-tabs">
+/* 電腦版品項編輯分頁：品項資料與其他規格分開閱讀；手機維持原版。 */
+(()=>{
+  const isDesktop=()=>matchMedia('(min-width:900px)').matches;
+  const tabs=()=>state.desktopItemEditorTabs||(state.desktopItemEditorTabs={});
+  const currentTab=(blockId,itemId)=>tabs()[`${blockId}:${itemId}`]||'item';
+  const applyTabs=()=>{
+    if(!isDesktop())return;
+    document.querySelectorAll('#menuBuilder .builder-section').forEach(section=>{
+      const blockId=section.dataset.block;
+      const cards=[...section.querySelectorAll(':scope > .menu-builder > .menu-block')];
+      cards.forEach((card,index)=>{
+        const block=(state.menuBuilder||[]).find(entry=>entry.id===blockId);
+        const itemId=block?.items?.[index]?.id;
+        if(!itemId)return;
+        card.dataset.desktopItemId=itemId;
+        const tab=currentTab(blockId,itemId);
+        card.querySelectorAll('[data-desktop-editor-panel]').forEach(panel=>panel.classList.toggle('desktop-editor-panel-hidden',panel.dataset.desktopEditorPanel!==tab));
+        card.querySelectorAll('[data-desktop-editor-tab]').forEach(button=>button.classList.toggle('active',button.dataset.desktopEditorTab===tab));
+      });
+    });
+  };
+  window.desktopItemEditorTab=(blockId,itemId,tab)=>{
+    tabs()[`${blockId}:${itemId}`]=tab;
+    applyTabs();
+  };
+  const decorate=()=>{
+    if(!isDesktop())return;
+    document.querySelectorAll('#menuBuilder .builder-section').forEach(section=>{
+      const blockId=section.dataset.block;
+      const block=(state.menuBuilder||[]).find(entry=>entry.id===blockId);
+      const cards=[...section.querySelectorAll(':scope > .menu-builder > .menu-block')];
+      cards.forEach((card,index)=>{
+        const itemId=block?.items?.[index]?.id;
+        if(!itemId||card.querySelector(':scope > .desktop-item-editor-tabs'))return;
+        const head=card.querySelector(':scope > .menu-block-head');
+        if(!head)return;
+        const fields=[...card.querySelectorAll(':scope > .builder-field')];
+        const itemField=fields[0],noticeField=fields[1];
+        const priceHeading=noticeField?.nextElementSibling;
+        const priceRows=priceHeading?.nextElementSibling;
+        const priceAdd=priceRows?.nextElementSibling;
+        const specsHeading=priceAdd?.nextElementSibling;
+        const specsGroups=specsHeading?.nextElementSibling;
+        const specsActions=specsGroups?.nextElementSibling;
+        [itemField,noticeField,priceHeading,priceRows,priceAdd].filter(Boolean).forEach(node=>node.dataset.desktopEditorPanel='item');
+        [specsHeading,specsGroups,specsActions].filter(Boolean).forEach(node=>node.dataset.desktopEditorPanel='spec');
+        const nav=document.createElement('div');
+        nav.className='desktop-item-editor-tabs';
+        nav.innerHTML=`<button type="button" data-desktop-editor-tab="item" onclick="desktopItemEditorTab('${blockId}','${itemId}','item')">品項</button><button type="button" data-desktop-editor-tab="spec" onclick="desktopItemEditorTab('${blockId}','${itemId}','spec')">規格</button>`;
+        head.insertAdjacentElement('afterend',nav);
+      });
+    });
+    applyTabs();
+  };
+  const style=document.createElement('style');
+  style.textContent=`
+    @media (min-width:900px){
+      #menuBuilder .desktop-item-editor-tabs{display:flex;gap:4px;margin:12px 0 14px;padding:4px;border-radius:999px;background:var(--soft);width:100%;max-width:310px}
+      #menuBuilder .desktop-item-editor-tabs button{flex:1;border:0;border-radius:999px;padding:8px 12px;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+      #menuBuilder .desktop-item-editor-tabs button.active{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(42,37,28,.13)}
+      #menuBuilder .desktop-editor-panel-hidden{display:none!important}
+      /* Override the earlier two-column builder grid.  Each edit form is a
+         single readable column; price rows retain their own compact columns. */
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block{grid-template-columns:minmax(0,1fr)!important}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>.desktop-item-editor-tabs{grid-column:1/-1;grid-row:auto;order:0;margin:0 0 2px;max-width:330px}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>.builder-field[data-desktop-editor-panel="item"]{grid-column:1/-1;margin-top:4px!important}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>.builder-field[data-desktop-editor-panel="item"] textarea{min-height:56px;height:56px;resize:vertical}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="item"],
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"]{grid-column:1/-1}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card{width:100%;margin-top:10px}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card{padding:8px 10px!important;min-height:0}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card .extra-group-head{grid-template-columns:34px minmax(90px,1fr) auto auto 38px;gap:6px}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card .group-drag-handle{width:34px;height:38px}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card [data-apply-same-group]{padding:7px 8px;font-size:12px;white-space:nowrap}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card .group-collapse-btn{padding:7px 8px;font-size:12px;white-space:nowrap}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card .builder-remove{width:38px;min-width:38px;height:38px;padding:0}
+      /* Keep collapsed sweetener/ice/etc. cards compact on one line. */
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card.is-collapsed{padding:8px 10px!important}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card.is-collapsed .extra-group-head{display:flex;align-items:center;gap:8px;min-width:0}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card.is-collapsed .group-drag-handle{width:34px;height:38px;flex:0 0 34px}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card.is-collapsed .collapsed-group-name{flex:1;min-width:0}
+      #menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card.is-collapsed .group-collapse-btn,#menuBuilder .builder-section:not(.is-collapsed) > .menu-builder > .menu-block>[data-desktop-editor-panel="spec"] .extra-group-card.is-collapsed .builder-remove{flex:0 0 auto;margin:0!important}
+      #menuBuilder .menu-block.desktop-editor-selected{grid-template-columns:minmax(0,1fr)!important;padding:16px!important}
+      #menuBuilder .menu-block.desktop-editor-selected>.desktop-item-editor-tabs{grid-column:1/-1;grid-row:auto;order:0;margin:0 0 2px;max-width:330px}
+      #menuBuilder .menu-block.desktop-editor-selected>.builder-field[data-desktop-editor-panel="item"]{grid-column:1/-1;margin-top:4px!important}
+      #menuBuilder .menu-block.desktop-editor-selected>.builder-field[data-desktop-editor-panel="item"] textarea{min-height:56px;height:56px;resize:vertical}
+      #menuBuilder .menu-block.desktop-editor-selected>[data-desktop-editor-panel="item"]{grid-column:1/-1}
+      #menuBuilder .menu-block.desktop-editor-selected>[data-desktop-editor-panel="spec"]{grid-column:1/-1}
+      #menuBuilder .menu-block.desktop-editor-selected>[data-desktop-editor-panel="spec"] .extra-group-card{width:100%;margin-top:10px}
+    }
+  `;
+  document.head.appendChild(style);
+  const oldRender=window.renderMenuBuilder;
+  if(typeof oldRender==='function'){
+    window.renderMenuBuilder=function(...args){
+      const result=oldRender.apply(this,args);
+      setTimeout(decorate,0);
+      return result;
+    };
+  }
+  setTimeout(decorate,0);
+  window.addEventListener('resize',()=>setTimeout(decorate,0));
+})();
+</script>
+<script id="bulk-same-group-two-column-picker">
+/* A compact two-column block picker for applying a same-named extra group. */
+(()=>{
+  const clean=value=>String(value||'').trim();
+  const esc=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  const normalizedName=value=>clean(value).replace(/\s+/g,' ').toLocaleLowerCase();
+  const findGroup=(bid,iid,gid)=>{
+    const block=(state.menuBuilder||[]).find(entry=>entry.id===bid);
+    const item=block?.items?.find(entry=>entry.id===iid);
+    return item?.groups?.find(entry=>entry.id===gid);
+  };
+  const style=document.createElement('style');
+  style.textContent=`
+    .bulk-apply-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .bulk-apply-card{border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+    .bulk-apply-card-head{display:flex;align-items:center;gap:8px;padding:9px 10px;background:#faf9f4;border-bottom:1px solid var(--line)}
+    .bulk-apply-card-head label{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .bulk-apply-toggle{border:0;background:transparent;color:var(--muted);font:inherit;cursor:pointer;padding:3px 5px}
+    .bulk-apply-items{display:grid}
+    .bulk-apply-items[hidden]{display:none}
+    .bulk-apply-items label{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}
+    .bulk-apply-items label:last-child{border-bottom:0}
+    @media(max-width:640px){.bulk-apply-grid{grid-template-columns:1fr}}
+  `;
+  document.head.appendChild(style);
+  window.builderToggleBulkSection=(button,blockId)=>{
+    const card=button.closest('.bulk-apply-card');
+    const list=card?.querySelector('[data-bulk-list]');if(!list)return;
+    list.hidden=!list.hidden;button.textContent=list.hidden?'▸':'▾';
+  };
+  window.builderApplySameNamedGroup=function(bid,iid,gid){
+    const source=findGroup(bid,iid,gid),key=normalizedName(source?.name);
+    if(!source||!key)return alert('請先輸入規格欄位名稱，再套用同名規格。');
+    const blocks=state.menuBuilder||[];
+    const blockLabel=block=>clean(block.title)||`區塊 ${blocks.findIndex(entry=>entry.id===block.id)+1}`;
+    const choices=blocks.map(block=>({block,items:(block.items||[]).filter(item=>item.id!==iid)})).filter(choice=>choice.items.length);
+    if(!choices.length)return alert('沒有其他可套用的品項。');
+    $('#modal').innerHTML=`<div class="modal"><div class="modalbox form"><h2>選擇要套用的品項</h2><p class="small">將「${esc(source.name)}」的規格套用到勾選品項，套用後仍可各自修改。</p><div class="bulk-apply-grid">${choices.map(({block,items})=>`<section class="bulk-apply-card"><div class="bulk-apply-card-head"><label class="builder-check"><input type="checkbox" data-bulk-block-toggle data-block-id="${esc(block.id)}" checked onchange="builderToggleBulkBlock(this,'${block.id}')">【${esc(blockLabel(block))}】</label><button type="button" class="bulk-apply-toggle" aria-label="展開或收合品項" onclick="builderToggleBulkSection(this,'${block.id}')">▸</button></div><div class="bulk-apply-items" data-bulk-list hidden>${items.map(item=>`<label class="builder-check"><input type="checkbox" data-bulk-item data-bulk-item-block="${esc(block.id)}" value="${esc(block.id)}|${esc(item.id)}" checked> ${esc(item.name||'未命名品項')}</label>`).join('')}</div></section>`).join('')}</div><div class="row" style="margin-top:16px"><button type="button" class="btn light" onclick="closeModal()">取消</button><button type="button" class="btn" onclick="builderConfirmApplySameNamedGroup('${bid}','${iid}','${gid}')">套用選取品項</button></div></div></div>`;
   };
 })();
 </script>
